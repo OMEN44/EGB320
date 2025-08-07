@@ -1,0 +1,16 @@
+/home/pi/EGB320/software/ros_ws/install/mobility/lib/mobility/listener
+/home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/package_run_dependencies/mobility
+/home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/parent_prefix_path/mobility
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/ament_prefix_path.sh
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/ament_prefix_path.dsv
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/path.sh
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/path.dsv
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.bash
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.sh
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.zsh
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.dsv
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/package.dsv
+/home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/packages/mobility
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/cmake/mobilityConfig.cmake
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/cmake/mobilityConfig-version.cmake
+/home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/package.xml

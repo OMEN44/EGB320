@@ -1,0 +1,249 @@
+[0.000000] (-) TimerEvent: {}
+[0.000567] (mobility) JobQueued: {'identifier': 'mobility', 'dependencies': OrderedDict()}
+[0.000750] (vision) JobQueued: {'identifier': 'vision', 'dependencies': OrderedDict()}
+[0.000778] (mobility) JobStarted: {'identifier': 'mobility'}
+[0.007270] (vision) JobStarted: {'identifier': 'vision'}
+[0.015009] (mobility) JobProgress: {'identifier': 'mobility', 'progress': 'cmake'}
+[0.015677] (mobility) Command: {'cmd': ['/usr/bin/cmake', '/home/pi/EGB320/software/ros_ws/src/mobility', '-DCMAKE_INSTALL_PREFIX=/home/pi/EGB320/software/ros_ws/install/mobility'], 'cwd': '/home/pi/EGB320/software/ros_ws/build/mobility', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'pi', 'SSH_CLIENT': '192.168.50.49 34370 22', 'XDG_SESSION_TYPE': 'tty', 'GIT_ASKPASS': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass.sh', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/lib/aarch64-linux-gnu:/opt/ros/jazzy/lib', 'BROWSER': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/helpers/browser.sh', 'HOME': '/home/pi', 'OLDPWD': '/home/pi/EGB320/software/ros_ws/src', 'TERM_PROGRAM_VERSION': '1.102.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1002/vscode-ipc-52a37cbe-8820-4aa5-a7b0-750102424d13.sock', 'ROS_PYTHON_VERSION': '3', 'VSCODE_GIT_ASKPASS_MAIN': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass-main.js', 'VSCODE_GIT_ASKPASS_NODE': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/node', 'SSL_CERT_FILE': '/usr/lib/ssl/cert.pem', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1002/bus', 'COLORTERM': 'truecolor', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'COLCON_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'pi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '9', 'PATH': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/remote-cli:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/pi/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand', 'XDG_RUNTIME_DIR': '/run/user/1002', 'SSL_CERT_DIR': '/usr/lib/ssl/certs', 'LANG': 'C.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'VSCODE_GIT_IPC_HANDLE': '/run/user/1002/vscode-git-4df75f0375.sock', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'VSCODE_GIT_ASKPASS_EXTRA_ARGS': '', 'PWD': '/home/pi/EGB320/software/ros_ws/build/mobility', 'LC_ALL': 'en_US.UTF-8', 'SSH_CONNECTION': '192.168.50.49 34370 192.168.50.227 22', 'XDG_DATA_DIRS': '/usr/share/gnome:/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy'}), 'shell': False}
+[0.099609] (-) TimerEvent: {}
+[0.199969] (-) TimerEvent: {}
+[0.300343] (-) TimerEvent: {}
+[0.400700] (-) TimerEvent: {}
+[0.466685] (mobility) StdoutLine: {'line': b'-- The C compiler identification is GNU 13.3.0\n'}
+[0.500802] (-) TimerEvent: {}
+[0.603049] (-) TimerEvent: {}
+[0.703417] (-) TimerEvent: {}
+[0.803772] (-) TimerEvent: {}
+[0.837838] (mobility) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 13.3.0\n'}
+[0.872837] (mobility) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.903876] (-) TimerEvent: {}
+[1.004227] (-) TimerEvent: {}
+[1.052561] (mobility) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[1.067636] (mobility) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[1.071030] (mobility) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[1.073903] (mobility) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[1.091594] (mobility) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[1.104368] (-) TimerEvent: {}
+[1.152631] (vision) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/vision', 'build', '--build-base', '/home/pi/EGB320/software/ros_ws/build/vision/build', 'install', '--record', '/home/pi/EGB320/software/ros_ws/build/vision/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/pi/EGB320/software/ros_ws/src/vision', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'pi', 'SSH_CLIENT': '192.168.50.49 34370 22', 'XDG_SESSION_TYPE': 'tty', 'GIT_ASKPASS': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass.sh', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/lib/aarch64-linux-gnu:/opt/ros/jazzy/lib', 'BROWSER': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/helpers/browser.sh', 'HOME': '/home/pi', 'OLDPWD': '/home/pi/EGB320/software/ros_ws/src', 'TERM_PROGRAM_VERSION': '1.102.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1002/vscode-ipc-52a37cbe-8820-4aa5-a7b0-750102424d13.sock', 'ROS_PYTHON_VERSION': '3', 'VSCODE_GIT_ASKPASS_MAIN': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass-main.js', 'VSCODE_GIT_ASKPASS_NODE': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/node', 'SSL_CERT_FILE': '/usr/lib/ssl/cert.pem', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1002/bus', 'COLORTERM': 'truecolor', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'COLCON_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'pi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '9', 'PATH': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/remote-cli:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/pi/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand', 'XDG_RUNTIME_DIR': '/run/user/1002', 'SSL_CERT_DIR': '/usr/lib/ssl/certs', 'LANG': 'C.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'VSCODE_GIT_IPC_HANDLE': '/run/user/1002/vscode-git-4df75f0375.sock', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'VSCODE_GIT_ASKPASS_EXTRA_ARGS': '', 'PWD': '/home/pi/EGB320/software/ros_ws/build/vision', 'LC_ALL': 'en_US.UTF-8', 'SSH_CONNECTION': '192.168.50.49 34370 192.168.50.227 22', 'XDG_DATA_DIRS': '/usr/share/gnome:/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/pi/EGB320/software/ros_ws/build/vision/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages:/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1'}, 'shell': False}
+[1.204482] (-) TimerEvent: {}
+[1.278026] (mobility) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[1.292368] (mobility) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[1.292809] (mobility) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[1.293541] (mobility) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[1.296578] (mobility) StdoutLine: {'line': b'-- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)\n'}
+[1.304566] (-) TimerEvent: {}
+[1.404880] (-) TimerEvent: {}
+[1.490394] (mobility) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter \n'}
+[1.504989] (-) TimerEvent: {}
+[1.515631] (vision) StdoutLine: {'line': b'running egg_info\n'}
+[1.537959] (vision) StdoutLine: {'line': b'writing ../../build/vision/vision.egg-info/PKG-INFO\n'}
+[1.538576] (vision) StdoutLine: {'line': b'writing dependency_links to ../../build/vision/vision.egg-info/dependency_links.txt\n'}
+[1.539517] (vision) StdoutLine: {'line': b'writing entry points to ../../build/vision/vision.egg-info/entry_points.txt\n'}
+[1.540101] (vision) StdoutLine: {'line': b'writing requirements to ../../build/vision/vision.egg-info/requires.txt\n'}
+[1.540791] (vision) StdoutLine: {'line': b'writing top-level names to ../../build/vision/vision.egg-info/top_level.txt\n'}
+[1.585633] (vision) StdoutLine: {'line': b"reading manifest file '../../build/vision/vision.egg-info/SOURCES.txt'\n"}
+[1.586084] (vision) StdoutLine: {'line': b"adding license file 'LICENSE'\n"}
+[1.586828] (vision) StdoutLine: {'line': b"writing manifest file '../../build/vision/vision.egg-info/SOURCES.txt'\n"}
+[1.587444] (vision) StdoutLine: {'line': b'running build\n'}
+[1.587624] (vision) StdoutLine: {'line': b'running build_py\n'}
+[1.587725] (vision) StdoutLine: {'line': b'copying vision/vision_main.py -> /home/pi/EGB320/software/ros_ws/build/vision/build/lib/vision\n'}
+[1.588775] (vision) StdoutLine: {'line': b'running install\n'}
+[1.598492] (vision) StdoutLine: {'line': b'running install_lib\n'}
+[1.605124] (-) TimerEvent: {}
+[1.623054] (vision) StdoutLine: {'line': b'copying /home/pi/EGB320/software/ros_ws/build/vision/build/lib/vision/vision_main.py -> /home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages/vision\n'}
+[1.623916] (vision) StdoutLine: {'line': b'byte-compiling /home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages/vision/vision_main.py to vision_main.cpython-312.pyc\n'}
+[1.624754] (vision) StdoutLine: {'line': b'running install_data\n'}
+[1.624941] (vision) StdoutLine: {'line': b'running install_egg_info\n'}
+[1.650926] (vision) StdoutLine: {'line': b"removing '/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages/vision-0.0.0-py3.12.egg-info' (and everything under it)\n"}
+[1.651699] (vision) StdoutLine: {'line': b'Copying ../../build/vision/vision.egg-info to /home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages/vision-0.0.0-py3.12.egg-info\n'}
+[1.653033] (vision) StdoutLine: {'line': b'running install_scripts\n'}
+[1.654233] (mobility) StdoutLine: {'line': b'-- Found rclcpp: 28.1.10 (/opt/ros/jazzy/share/rclcpp/cmake)\n'}
+[1.699083] (mobility) StdoutLine: {'line': b'-- Found rosidl_generator_c: 4.6.5 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)\n'}
+[1.705207] (-) TimerEvent: {}
+[1.716607] (mobility) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 4.6.5 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)\n'}
+[1.736929] (mobility) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.761000] (mobility) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.805316] (-) TimerEvent: {}
+[1.806846] (vision) StdoutLine: {'line': b'Installing talker script to /home/pi/EGB320/software/ros_ws/install/vision/lib/vision\n'}
+[1.807702] (vision) StdoutLine: {'line': b"writing list of installed files to '/home/pi/EGB320/software/ros_ws/build/vision/install.log'\n"}
+[1.867103] (mobility) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 7.3.2 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)\n'}
+[1.870879] (mobility) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 8.4.2 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)\n'}
+[1.903664] (vision) CommandEnded: {'returncode': 0}
+[1.905428] (-) TimerEvent: {}
+[1.919103] (vision) JobEnded: {'identifier': 'vision', 'rc': 0}
+[2.005560] (-) TimerEvent: {}
+[2.006372] (mobility) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.13")  \n'}
+[2.031461] (mobility) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") \n'}
+[2.065432] (mobility) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[2.105668] (-) TimerEvent: {}
+[2.155281] (mobility) StdoutLine: {'line': b'-- Found std_msgs: 5.3.6 (/opt/ros/jazzy/share/std_msgs/cmake)\n'}
+[2.175092] (mobility) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.17.2 (/opt/ros/jazzy/share/ament_lint_auto/cmake)\n'}
+[2.205769] (-) TimerEvent: {}
+[2.306122] (-) TimerEvent: {}
+[2.339787] (mobility) StdoutLine: {'line': b"-- Added test 'cppcheck' to perform static code analysis on C / C++ code\n"}
+[2.340110] (mobility) StdoutLine: {'line': b'-- Configured cppcheck include dirs: \n'}
+[2.340226] (mobility) StdoutLine: {'line': b'-- Configured cppcheck exclude dirs and/or files: \n'}
+[2.341002] (mobility) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[2.342351] (mobility) StdoutLine: {'line': b"-- Added test 'uncrustify' to check C / C++ code style\n"}
+[2.342485] (mobility) StdoutLine: {'line': b'-- Configured uncrustify additional arguments: \n'}
+[2.343138] (mobility) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[2.345236] (mobility) StdoutLine: {'line': b'-- Configuring done (2.3s)\n'}
+[2.361713] (mobility) StdoutLine: {'line': b'-- Generating done (0.0s)\n'}
+[2.367467] (mobility) StdoutLine: {'line': b'-- Build files have been written to: /home/pi/EGB320/software/ros_ws/build/mobility\n'}
+[2.384063] (mobility) CommandEnded: {'returncode': 0}
+[2.384738] (mobility) JobProgress: {'identifier': 'mobility', 'progress': 'build'}
+[2.386330] (mobility) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/pi/EGB320/software/ros_ws/build/mobility', '--', '-j4', '-l4'], 'cwd': '/home/pi/EGB320/software/ros_ws/build/mobility', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'pi', 'SSH_CLIENT': '192.168.50.49 34370 22', 'XDG_SESSION_TYPE': 'tty', 'GIT_ASKPASS': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass.sh', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/lib/aarch64-linux-gnu:/opt/ros/jazzy/lib', 'BROWSER': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/helpers/browser.sh', 'HOME': '/home/pi', 'OLDPWD': '/home/pi/EGB320/software/ros_ws/src', 'TERM_PROGRAM_VERSION': '1.102.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1002/vscode-ipc-52a37cbe-8820-4aa5-a7b0-750102424d13.sock', 'ROS_PYTHON_VERSION': '3', 'VSCODE_GIT_ASKPASS_MAIN': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass-main.js', 'VSCODE_GIT_ASKPASS_NODE': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/node', 'SSL_CERT_FILE': '/usr/lib/ssl/cert.pem', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1002/bus', 'COLORTERM': 'truecolor', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'COLCON_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'pi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '9', 'PATH': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/remote-cli:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/pi/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand', 'XDG_RUNTIME_DIR': '/run/user/1002', 'SSL_CERT_DIR': '/usr/lib/ssl/certs', 'LANG': 'C.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'VSCODE_GIT_IPC_HANDLE': '/run/user/1002/vscode-git-4df75f0375.sock', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'VSCODE_GIT_ASKPASS_EXTRA_ARGS': '', 'PWD': '/home/pi/EGB320/software/ros_ws/build/mobility', 'LC_ALL': 'en_US.UTF-8', 'SSH_CONNECTION': '192.168.50.49 34370 192.168.50.227 22', 'XDG_DATA_DIRS': '/usr/share/gnome:/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy'}), 'shell': False}
+[2.406232] (-) TimerEvent: {}
+[2.473073] (mobility) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/listener.dir/src/mobility_main.cpp.o\x1b[0m\n'}
+[2.506349] (-) TimerEvent: {}
+[2.606716] (-) TimerEvent: {}
+[2.707080] (-) TimerEvent: {}
+[2.807572] (-) TimerEvent: {}
+[2.908014] (-) TimerEvent: {}
+[3.008383] (-) TimerEvent: {}
+[3.108754] (-) TimerEvent: {}
+[3.209122] (-) TimerEvent: {}
+[3.309555] (-) TimerEvent: {}
+[3.409951] (-) TimerEvent: {}
+[3.510354] (-) TimerEvent: {}
+[3.610773] (-) TimerEvent: {}
+[3.711168] (-) TimerEvent: {}
+[3.811542] (-) TimerEvent: {}
+[3.911931] (-) TimerEvent: {}
+[4.012386] (-) TimerEvent: {}
+[4.112816] (-) TimerEvent: {}
+[4.213205] (-) TimerEvent: {}
+[4.313561] (-) TimerEvent: {}
+[4.413927] (-) TimerEvent: {}
+[4.514355] (-) TimerEvent: {}
+[4.614791] (-) TimerEvent: {}
+[4.715186] (-) TimerEvent: {}
+[4.815591] (-) TimerEvent: {}
+[4.915996] (-) TimerEvent: {}
+[5.016376] (-) TimerEvent: {}
+[5.116739] (-) TimerEvent: {}
+[5.217097] (-) TimerEvent: {}
+[5.317513] (-) TimerEvent: {}
+[5.417865] (-) TimerEvent: {}
+[5.518237] (-) TimerEvent: {}
+[5.618613] (-) TimerEvent: {}
+[5.719022] (-) TimerEvent: {}
+[5.819390] (-) TimerEvent: {}
+[5.919758] (-) TimerEvent: {}
+[6.020142] (-) TimerEvent: {}
+[6.120529] (-) TimerEvent: {}
+[6.220915] (-) TimerEvent: {}
+[6.321352] (-) TimerEvent: {}
+[6.421765] (-) TimerEvent: {}
+[6.522192] (-) TimerEvent: {}
+[6.622585] (-) TimerEvent: {}
+[6.722953] (-) TimerEvent: {}
+[6.823320] (-) TimerEvent: {}
+[6.923671] (-) TimerEvent: {}
+[7.024078] (-) TimerEvent: {}
+[7.124683] (-) TimerEvent: {}
+[7.225072] (-) TimerEvent: {}
+[7.325476] (-) TimerEvent: {}
+[7.425893] (-) TimerEvent: {}
+[7.526311] (-) TimerEvent: {}
+[7.626715] (-) TimerEvent: {}
+[7.727099] (-) TimerEvent: {}
+[7.827473] (-) TimerEvent: {}
+[7.927817] (-) TimerEvent: {}
+[8.028176] (-) TimerEvent: {}
+[8.128522] (-) TimerEvent: {}
+[8.228886] (-) TimerEvent: {}
+[8.329258] (-) TimerEvent: {}
+[8.429684] (-) TimerEvent: {}
+[8.530113] (-) TimerEvent: {}
+[8.630496] (-) TimerEvent: {}
+[8.730878] (-) TimerEvent: {}
+[8.831320] (-) TimerEvent: {}
+[8.931656] (-) TimerEvent: {}
+[9.032065] (-) TimerEvent: {}
+[9.132495] (-) TimerEvent: {}
+[9.232997] (-) TimerEvent: {}
+[9.333428] (-) TimerEvent: {}
+[9.434179] (-) TimerEvent: {}
+[9.534669] (-) TimerEvent: {}
+[9.635062] (-) TimerEvent: {}
+[9.735470] (-) TimerEvent: {}
+[9.835880] (-) TimerEvent: {}
+[9.936433] (-) TimerEvent: {}
+[10.036782] (-) TimerEvent: {}
+[10.137151] (-) TimerEvent: {}
+[10.237512] (-) TimerEvent: {}
+[10.337861] (-) TimerEvent: {}
+[10.438232] (-) TimerEvent: {}
+[10.538596] (-) TimerEvent: {}
+[10.639013] (-) TimerEvent: {}
+[10.739371] (-) TimerEvent: {}
+[10.839723] (-) TimerEvent: {}
+[10.940085] (-) TimerEvent: {}
+[11.040436] (-) TimerEvent: {}
+[11.140796] (-) TimerEvent: {}
+[11.241156] (-) TimerEvent: {}
+[11.341499] (-) TimerEvent: {}
+[11.441862] (-) TimerEvent: {}
+[11.542223] (-) TimerEvent: {}
+[11.642577] (-) TimerEvent: {}
+[11.742924] (-) TimerEvent: {}
+[11.843294] (-) TimerEvent: {}
+[11.943639] (-) TimerEvent: {}
+[12.044013] (-) TimerEvent: {}
+[12.144356] (-) TimerEvent: {}
+[12.244703] (-) TimerEvent: {}
+[12.345064] (-) TimerEvent: {}
+[12.445405] (-) TimerEvent: {}
+[12.545763] (-) TimerEvent: {}
+[12.646150] (-) TimerEvent: {}
+[12.746503] (-) TimerEvent: {}
+[12.846861] (-) TimerEvent: {}
+[12.947231] (-) TimerEvent: {}
+[13.047588] (-) TimerEvent: {}
+[13.147993] (-) TimerEvent: {}
+[13.248390] (-) TimerEvent: {}
+[13.348789] (-) TimerEvent: {}
+[13.449207] (-) TimerEvent: {}
+[13.549740] (-) TimerEvent: {}
+[13.650175] (-) TimerEvent: {}
+[13.750645] (-) TimerEvent: {}
+[13.851035] (-) TimerEvent: {}
+[13.951535] (-) TimerEvent: {}
+[14.052046] (-) TimerEvent: {}
+[14.152512] (-) TimerEvent: {}
+[14.253179] (-) TimerEvent: {}
+[14.342238] (mobility) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable listener\x1b[0m\n'}
+[14.353273] (-) TimerEvent: {}
+[14.453681] (-) TimerEvent: {}
+[14.554428] (-) TimerEvent: {}
+[14.655369] (-) TimerEvent: {}
+[14.756316] (-) TimerEvent: {}
+[14.856749] (-) TimerEvent: {}
+[14.957136] (-) TimerEvent: {}
+[15.032719] (mobility) StdoutLine: {'line': b'[100%] Built target listener\n'}
+[15.052303] (mobility) CommandEnded: {'returncode': 0}
+[15.053449] (mobility) JobProgress: {'identifier': 'mobility', 'progress': 'install'}
+[15.057231] (-) TimerEvent: {}
+[15.068812] (mobility) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/pi/EGB320/software/ros_ws/build/mobility'], 'cwd': '/home/pi/EGB320/software/ros_ws/build/mobility', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'USER': 'pi', 'SSH_CLIENT': '192.168.50.49 34370 22', 'XDG_SESSION_TYPE': 'tty', 'GIT_ASKPASS': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass.sh', 'SHLVL': '2', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/lib/aarch64-linux-gnu:/opt/ros/jazzy/lib', 'BROWSER': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/helpers/browser.sh', 'HOME': '/home/pi', 'OLDPWD': '/home/pi/EGB320/software/ros_ws/src', 'TERM_PROGRAM_VERSION': '1.102.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1002/vscode-ipc-52a37cbe-8820-4aa5-a7b0-750102424d13.sock', 'ROS_PYTHON_VERSION': '3', 'VSCODE_GIT_ASKPASS_MAIN': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/extensions/git/dist/askpass-main.js', 'VSCODE_GIT_ASKPASS_NODE': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/node', 'SSL_CERT_FILE': '/usr/lib/ssl/cert.pem', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1002/bus', 'COLORTERM': 'truecolor', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'COLCON_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'pi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '9', 'PATH': '/home/pi/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/remote-cli:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/pi/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand', 'XDG_RUNTIME_DIR': '/run/user/1002', 'SSL_CERT_DIR': '/usr/lib/ssl/certs', 'LANG': 'C.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'VSCODE_GIT_IPC_HANDLE': '/run/user/1002/vscode-git-4df75f0375.sock', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'VSCODE_GIT_ASKPASS_EXTRA_ARGS': '', 'PWD': '/home/pi/EGB320/software/ros_ws/build/mobility', 'LC_ALL': 'en_US.UTF-8', 'SSH_CONNECTION': '192.168.50.49 34370 192.168.50.227 22', 'XDG_DATA_DIRS': '/usr/share/gnome:/usr/local/share:/usr/share:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/pi/EGB320/software/ros_ws/install/vision/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/home/pi/EGB320/software/ros_ws/install/vision:/opt/ros/jazzy'}), 'shell': False}
+[15.083332] (mobility) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[15.083646] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/lib/mobility/listener\n'}
+[15.092513] (mobility) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/pi/EGB320/software/ros_ws/install/mobility/lib/mobility/listener" to ""\n'}
+[15.092824] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/package_run_dependencies/mobility\n'}
+[15.093094] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/parent_prefix_path/mobility\n'}
+[15.093381] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/ament_prefix_path.sh\n'}
+[15.093538] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/ament_prefix_path.dsv\n'}
+[15.093698] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/path.sh\n'}
+[15.093858] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/environment/path.dsv\n'}
+[15.094024] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.bash\n'}
+[15.094215] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.sh\n'}
+[15.094397] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.zsh\n'}
+[15.094576] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/local_setup.dsv\n'}
+[15.094754] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/package.dsv\n'}
+[15.094981] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/ament_index/resource_index/packages/mobility\n'}
+[15.095207] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/cmake/mobilityConfig.cmake\n'}
+[15.095350] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/cmake/mobilityConfig-version.cmake\n'}
+[15.095508] (mobility) StdoutLine: {'line': b'-- Installing: /home/pi/EGB320/software/ros_ws/install/mobility/share/mobility/package.xml\n'}
+[15.098388] (mobility) CommandEnded: {'returncode': 0}
+[15.113896] (mobility) JobEnded: {'identifier': 'mobility', 'rc': 0}
+[15.114874] (-) EventReactorShutdown: {}
