@@ -1,8 +1,6 @@
-# see red_blue.py in the examples dir
-import time
+import cv2
 import pyfakewebcam
 import numpy as np
-import cv2
 
 cap = cv2.VideoCapture(0)
 width = 640
@@ -16,13 +14,7 @@ cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
 cap.set(cv2.CAP_PROP_AUTO_WB, 0)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
 
-
-blue = np.zeros((480,640,3), dtype=np.uint8)
-blue[:,:,2] = 255
-
-red = np.zeros((480,640,3), dtype=np.uint8)
-red[:,:,0] = 255
-
+# Video sinks
 camera = pyfakewebcam.FakeWebcam('/dev/video2', width, height)
 camera2 = pyfakewebcam.FakeWebcam('/dev/video3', width, height)
 
@@ -54,33 +46,24 @@ def process(frame):
 
     return processed_frame
 
-count = 0
-saveTest = False  # Set to True if you want to save test images
-
 while True:
-    # Take each frame
-    _, frame = cap.read()
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to grab frame")
+        break
 
-    # Save test image data
-    if (count <= 1000 and saveTest):
-        cv2.imwrite('test_data/test_frame_{}.jpg'.format(time.time_ns()), frame)
-        count += 1
+    processedFrame = process(frame)
 
-
-    output = process(frame)
 
     outputFrame = frame.copy()
     outputFrame[:, :, 0] = frame[:, :, 2]
     outputFrame[:, :, 2] = frame[:, :, 0]
-    # print("Output frame shape:", outputFrame.shape)
-    # print("processing frame shape:", output.shape)
     camera.schedule_frame(outputFrame)
-    camera2.schedule_frame(output)
+    camera2.schedule_frame(processedFrame)
 
-    # Exit when 'q' key is pressed
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    k = cv2.waitKey(5) & 0xFF
+    if k == 27:
         break
 
 cap.release()
 cv2.destroyAllWindows()
-

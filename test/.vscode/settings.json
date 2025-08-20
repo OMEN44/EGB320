@@ -1,0 +1,6 @@
+{
+"python.analysis.memory.keepLibraryAst": true,
+"python.defaultInterpreterPath": "/usr/bin/python3",
+"python.autoComplete.extraPaths": [
+ "/home/bird/EGB320/test/.venv/lib/python3.11/site-packages/cv2"
+]}
