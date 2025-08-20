@@ -2,6 +2,9 @@ import cv2
 import pyfakewebcam
 import numpy as np
 
+import isleMarkers
+import stock
+
 cap = cv2.VideoCapture(0)
 width = 640
 height = 480
@@ -10,9 +13,9 @@ fps = 15
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 cap.set(cv2.CAP_PROP_FPS, fps)
-cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-cap.set(cv2.CAP_PROP_AUTO_WB, 0)
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+# cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+# cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+# cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
 
 # Video sinks
 camera = pyfakewebcam.FakeWebcam('/dev/video2', width, height)
@@ -46,24 +49,38 @@ def process(frame):
 
     return processed_frame
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Failed to grab frame")
-        break
+def useVideo():
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            break
 
-    processedFrame = process(frame)
+        processedFrame = process(frame)
 
 
-    outputFrame = frame.copy()
-    outputFrame[:, :, 0] = frame[:, :, 2]
-    outputFrame[:, :, 2] = frame[:, :, 0]
-    camera.schedule_frame(outputFrame)
-    camera2.schedule_frame(processedFrame)
+        outputFrame = frame.copy()
+        outputFrame[:, :, 0] = frame[:, :, 2]
+        outputFrame[:, :, 2] = frame[:, :, 0]
+        camera.schedule_frame(outputFrame)
+        # camera2.schedule_frame(processedFrame)
+        camera2.schedule_frame(isleMarkers.findMarkers(frame))
 
-    k = cv2.waitKey(5) & 0xFF
-    if k == 27:
-        break
 
-cap.release()
-cv2.destroyAllWindows()
+        k = cv2.waitKey(5) & 0xFF
+        if k == 27:
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# useVideo()
+
+
+frame = cv2.imread('/home/bird/EGB320/software/python/test_data/IsleView.jpg')
+outputFrame = frame.copy()
+outputFrame[:, :, 0] = frame[:, :, 2]
+outputFrame[:, :, 2] = frame[:, :, 0]
+
+camera.schedule_frame(stock.findStock(cv2.imread('/home/bird/EGB320/software/python/test_data/testA.jpg')))
+camera2.schedule_frame(stock.findStock(cv2.imread('/home/bird/EGB320/software/python/test_data/IsleView.jpg')))
