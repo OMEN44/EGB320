@@ -29,10 +29,10 @@ while(1):
     # Bitwise-AND mask and original image
     res = cv.bitwise_and(frame,frame, mask= mask)
 
-    cv.imshow('frame',frame)
-    cv.imshow('mask',mask)
+#    cv.imshow('frame',frame)
+#    cv.imshow('mask',mask)
     out.write(mask)
-    cv.imshow('res',res)
+#    cv.imshow('res',res)
     k = cv.waitKey(5) & 0xFF
     if k == 27:
         break
