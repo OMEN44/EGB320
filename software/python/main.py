@@ -1,6 +1,7 @@
 import cv2
 import pyfakewebcam
 import numpy as np
+from time import sleep
 
 import isleMarkers
 import stock
@@ -50,10 +51,12 @@ def process(frame):
 
     return processed_frame
 
+
 def useVideo():
+    count = 1
     while True:
-        ret, frame = cap.read()
-        if not ret:
+        frame = cv2.imread(f'/home/huon/Programs/EGB320/software/python/test_data2/isle3.jpg')
+        if frame is None:
             print("Failed to grab frame")
             break
 
@@ -63,9 +66,13 @@ def useVideo():
         outputFrame[:, :, 2] = frame[:, :, 0]
         
         camera.schedule_frame(outputFrame)
-        camera2.schedule_frame(stock.findStock(frame))
+        camera2.schedule_frame(isleMarkers.findMarkers(frame))
         # camera2.schedule_frame(stock.findStock(isleMarkers.findMarkers(frame)))
 
+        sleep(1)
+        count += 1
+        if count >= 5:
+            count = 1
 
         k = cv2.waitKey(5) & 0xFF
         if k == 27:

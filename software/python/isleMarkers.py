@@ -12,13 +12,7 @@ def findMarkers(frame):
     
     # make a mask for the color black
     lower_black = np.array([0, 0, 0])
-    upper_black = np.array([255, 120, 60])
-
-    # blk1= 0
-    # cv2.cvtColor(np.array([[0x15],[0x15],[0x13]]), cv2.COLOR_RGB2HSV, blk1)
-    # blk2= 0
-    # cv2.cvtColor(np.array([[0],[0],[0]]), cv2.COLOR_RGB2HSV, blk2)
-    # print("Black1:", blk1, "Black2:", blk2)
+    upper_black = np.array([255, 120, 80])
 
     mask = cv2.inRange(hsv, lower_black, upper_black)
     mask = cv2.erode(mask, np.ones((5, 5)))  # Erode to remove noise
@@ -48,22 +42,47 @@ def findMarkers(frame):
     # if (index != 0):
     #     x, y, h, w = cv2.boundingRect(mask)
     #     outputFrame = cv2.putText(outputFrame, str(index), (isleCenter[0] // index - 6, isleCenter[1] // index + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
+    markerClusters = []
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area > 100:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
             # print(approx)
-            if len(approx) == 4:
-                rect = cv2.minAreaRect(cnt)
-                if abs(rect[1][0] - rect[1][1]) < 3:
-                    box = cv2.boxPoints(rect)
-                    box = np.int_(box)
-                    cv2.drawContours(outputFrame,[box],0,(0,0,255),2)
-            elif len(approx) >= 8 and cv2.isContourConvex(approx):
-                outputFrame = cv2.drawContours(outputFrame, cnt, 0, (255, 255, 255), 2)
-                cv2.drawContours(outputFrame, [cnt], 0, (0, 255, 128), -1)
+            rect = cv2.minAreaRect(cnt)
+            if abs(rect[1][0] - rect[1][1]) < 3:
+                box = cv2.boxPoints(rect)
+                box = np.int_(box)
+                cv2.drawContours(outputFrame,[box],0,(0,0,255),2)
 
-                
+                # Cluster markers
+                clusterIndex = -1
+                if (len(markerClusters) == 0):
+                    markerClusters.append([rect[0][0], rect[0][1], 1, -1])
+                else:
+                    for index, cluster in enumerate(markerClusters):
+                        if abs(np.sqrt((cluster[0] - rect[0][0])**2 + (cluster[1] - rect[0][1]))) < rect[1][0] * 2:
+                            cluster[0] = (cluster[0] + rect[0][0]) / 2
+                            cluster[1] = (cluster[1] + rect[0][1]) / 2
+                            cluster[2] += 1
+                            clusterIndex = index
+                            break
+                        else:
+                            clusterIndex = len(markerClusters)
+                            markerClusters.append([rect[0][0], rect[0][1], 1, -1])
+
+                print(markerClusters)
+                if len(approx) == 4:
+                    # 0 means picking station
+                    markerClusters[clusterIndex][3] = 0
+                elif len(approx) >= 8 and cv2.isContourConvex(approx):
+                    # 1 means isle marker
+                    markerClusters[clusterIndex][3] = 1
+
+    # Write a label for each cluster
+    for cluster in markerClusters:
+        cv2.putText(outputFrame, f'{"Picking Station" if cluster[3] == 0 else "Isle Marker"}: {cluster[2]}', (int(cluster[0]) - 6, int(cluster[1]) + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
             
             

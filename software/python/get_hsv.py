@@ -5,7 +5,7 @@ def nothing(x):
     pass
 
 # Load image
-image = cv2.imread('/home/bird/EGB320/software/python/test_data/ramp.jpg')
+image = cv2.imread('/home/bird/EGB320/software/python/test_data2/isle3.jpg')
 
 # Create a window
 cv2.namedWindow('image')
