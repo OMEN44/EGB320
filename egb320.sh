@@ -20,4 +20,15 @@ sudo apt install ros-jazzy-ros-base -y
 
 echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
+# Setup v4l2loopback stuff
+sudo apt update
+sudo apt install build-essential linux-headers-$(uname -r) git dkms
+
+git clone https://github.com/umlaeute/v4l2loopback.git
+cd v4l2loopback
+
+sudo dkms add .
+sudo dkms build v4l2loopback/0.15.1   # replace with version if needed
+sudo dkms install v4l2loopback/0.15.1
+
 echo "Close this terminal and open a new one to start using ROS Jazzy."

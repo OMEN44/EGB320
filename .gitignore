@@ -47,3 +47,4 @@ env
 build
 install
 log
+v4l2loopback
