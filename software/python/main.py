@@ -69,7 +69,7 @@ def useVideo():
         camera2.schedule_frame(isleMarkers.findMarkers(frame))
         # camera2.schedule_frame(stock.findStock(isleMarkers.findMarkers(frame)))
 
-        sleep(1)
+        sleep(100)
         count += 1
         if count >= 5:
             count = 1
