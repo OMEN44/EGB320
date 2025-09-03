@@ -5,6 +5,7 @@ from time import sleep
 
 import isleMarkers
 import stock
+import colour_mask
 
 cap = cv2.VideoCapture(0)
 width = 640
@@ -55,7 +56,7 @@ def process(frame):
 def useVideo():
     count = 1
     while True:
-        frame = cv2.imread(f'/home/huon/Programs/EGB320/software/python/test_data2/isle3.jpg')
+        frame = cv2.imread(f'/home/huon/Programs/EGB320/software/python/test_data2/isle2.jpg')
         if frame is None:
             print("Failed to grab frame")
             break
@@ -66,10 +67,23 @@ def useVideo():
         outputFrame[:, :, 2] = frame[:, :, 0]
         
         camera.schedule_frame(outputFrame)
-        camera2.schedule_frame(isleMarkers.findMarkers(frame))
+        camera2.schedule_frame(colour_mask.proccess(
+            frame, 
+            # Blue
+            # np.array([80, 0, 0]), 
+            # np.array([130, 255, 180]), 
+            # Green
+            # (51,50,0),
+            # (97,255,255),
+            # Yellow
+            (15,53,36), 
+            (37,231,255),
+            5,
+            True
+        ))
         # camera2.schedule_frame(stock.findStock(isleMarkers.findMarkers(frame)))
 
-        sleep(100)
+        sleep(1)
         count += 1
         if count >= 5:
             count = 1

@@ -48,3 +48,5 @@ build
 install
 log
 v4l2loopback
+
+__pycache__
