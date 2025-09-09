@@ -1,0 +1,27 @@
+[1.068s] Invoking command in '/home/pi/egb320/software/ros_ws/src/robot': PIXI_PROMPT=(egb320) PS1=(egb320) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m\] PYTHONPATH=/home/pi/egb320/build/robot/prefix_override:/home/pi/egb320/.pixi/envs/default/lib/python3.11/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi/egb320/install/robot/lib/python3.11/site-packages:${PYTHONPATH} /home/pi/egb320/.pixi/envs/default/bin/python3.11 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/robot build --build-base /home/pi/egb320/build/robot/build install --record /home/pi/egb320/build/robot/install.log --single-version-externally-managed install_data
+[1.433s] running egg_info
+[1.433s] writing ../../../../build/robot/robot.egg-info/PKG-INFO
+[1.434s] writing dependency_links to ../../../../build/robot/robot.egg-info/dependency_links.txt
+[1.437s] writing entry points to ../../../../build/robot/robot.egg-info/entry_points.txt
+[1.437s] writing requirements to ../../../../build/robot/robot.egg-info/requires.txt
+[1.438s] writing top-level names to ../../../../build/robot/robot.egg-info/top_level.txt
+[1.458s] reading manifest file '../../../../build/robot/robot.egg-info/SOURCES.txt'
+[1.460s] writing manifest file '../../../../build/robot/robot.egg-info/SOURCES.txt'
+[1.461s] running build
+[1.461s] running build_py
+[1.462s] copying robot/vision/video.py -> /home/pi/egb320/build/robot/build/lib/robot/vision
+[1.464s] running install
+[1.464s] running install_lib
+[1.467s] copying /home/pi/egb320/build/robot/build/lib/robot/vision/video.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision
+[1.469s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision/video.py to video.cpython-311.pyc
+[1.470s] running install_data
+[1.471s] running install_egg_info
+[1.476s] removing '/home/pi/egb320/install/robot/lib/python3.11/site-packages/robot-0.0.0-py3.11.egg-info' (and everything under it)
+[1.477s] Copying ../../../../build/robot/robot.egg-info to /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot-0.0.0-py3.11.egg-info
+[1.479s] running install_scripts
+[1.532s] Installing collection script to /home/pi/egb320/install/robot/lib/robot
+[1.533s] Installing mobility script to /home/pi/egb320/install/robot/lib/robot
+[1.536s] Installing navigation script to /home/pi/egb320/install/robot/lib/robot
+[1.536s] Installing vision script to /home/pi/egb320/install/robot/lib/robot
+[1.538s] writing list of installed files to '/home/pi/egb320/build/robot/install.log'
+[1.608s] Invoked command in '/home/pi/egb320/software/ros_ws/src/robot' returned '0': PIXI_PROMPT=(egb320) PS1=(egb320) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m\] PYTHONPATH=/home/pi/egb320/build/robot/prefix_override:/home/pi/egb320/.pixi/envs/default/lib/python3.11/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi/egb320/install/robot/lib/python3.11/site-packages:${PYTHONPATH} /home/pi/egb320/.pixi/envs/default/bin/python3.11 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/robot build --build-base /home/pi/egb320/build/robot/build install --record /home/pi/egb320/build/robot/install.log --single-version-externally-managed install_data

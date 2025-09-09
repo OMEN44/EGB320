@@ -1,0 +1,72 @@
+[1.096s] Invoking command in '/home/pi/egb320/software/ros_ws/src/robot': PIXI_PROMPT=(egb320) PS1=(egb320) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m\] PYTHONPATH=/home/pi/egb320/build/robot/prefix_override:/home/pi/egb320/.pixi/envs/default/lib/python3.11/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi/egb320/install/robot/lib/python3.11/site-packages:${PYTHONPATH} /home/pi/egb320/.pixi/envs/default/bin/python3.11 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/robot build --build-base /home/pi/egb320/build/robot/build install --record /home/pi/egb320/build/robot/install.log --single-version-externally-managed install_data
+[1.892s] running egg_info
+[1.895s] creating ../../../../build/robot/robot.egg-info
+[1.895s] writing ../../../../build/robot/robot.egg-info/PKG-INFO
+[1.896s] writing dependency_links to ../../../../build/robot/robot.egg-info/dependency_links.txt
+[1.903s] writing entry points to ../../../../build/robot/robot.egg-info/entry_points.txt
+[1.904s] writing requirements to ../../../../build/robot/robot.egg-info/requires.txt
+[1.904s] writing top-level names to ../../../../build/robot/robot.egg-info/top_level.txt
+[1.906s] writing manifest file '../../../../build/robot/robot.egg-info/SOURCES.txt'
+[1.940s] reading manifest file '../../../../build/robot/robot.egg-info/SOURCES.txt'
+[1.941s] writing manifest file '../../../../build/robot/robot.egg-info/SOURCES.txt'
+[1.942s] running build
+[1.942s] running build_py
+[1.943s] creating /home/pi/egb320/build/robot/build
+[1.943s] creating /home/pi/egb320/build/robot/build/lib
+[1.944s] creating /home/pi/egb320/build/robot/build/lib/robot
+[1.946s] copying robot/__init__.py -> /home/pi/egb320/build/robot/build/lib/robot
+[1.946s] copying robot/navigation_node.py -> /home/pi/egb320/build/robot/build/lib/robot
+[1.947s] copying robot/mobility_node.py -> /home/pi/egb320/build/robot/build/lib/robot
+[1.948s] copying robot/collection_node.py -> /home/pi/egb320/build/robot/build/lib/robot
+[1.949s] copying robot/vision_node.py -> /home/pi/egb320/build/robot/build/lib/robot
+[1.950s] creating /home/pi/egb320/build/robot/build/lib/robot/mobility
+[1.950s] copying robot/mobility/__init__.py -> /home/pi/egb320/build/robot/build/lib/robot/mobility
+[1.951s] creating /home/pi/egb320/build/robot/build/lib/robot/collection
+[1.952s] copying robot/collection/__init__.py -> /home/pi/egb320/build/robot/build/lib/robot/collection
+[1.953s] creating /home/pi/egb320/build/robot/build/lib/robot/vision
+[1.953s] copying robot/vision/__init__.py -> /home/pi/egb320/build/robot/build/lib/robot/vision
+[1.954s] copying robot/vision/video.py -> /home/pi/egb320/build/robot/build/lib/robot/vision
+[1.955s] creating /home/pi/egb320/build/robot/build/lib/robot/navigation
+[1.955s] copying robot/navigation/__init__.py -> /home/pi/egb320/build/robot/build/lib/robot/navigation
+[1.957s] running install
+[1.958s] running install_lib
+[1.959s] creating /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.960s] copying /home/pi/egb320/build/robot/build/lib/robot/__init__.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.961s] copying /home/pi/egb320/build/robot/build/lib/robot/navigation_node.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.961s] creating /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/mobility
+[1.961s] copying /home/pi/egb320/build/robot/build/lib/robot/mobility/__init__.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/mobility
+[1.962s] creating /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/collection
+[1.962s] copying /home/pi/egb320/build/robot/build/lib/robot/collection/__init__.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/collection
+[1.963s] copying /home/pi/egb320/build/robot/build/lib/robot/mobility_node.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.963s] creating /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision
+[1.964s] copying /home/pi/egb320/build/robot/build/lib/robot/vision/__init__.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision
+[1.964s] copying /home/pi/egb320/build/robot/build/lib/robot/vision/video.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision
+[1.964s] copying /home/pi/egb320/build/robot/build/lib/robot/collection_node.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.965s] copying /home/pi/egb320/build/robot/build/lib/robot/vision_node.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot
+[1.965s] creating /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/navigation
+[1.966s] copying /home/pi/egb320/build/robot/build/lib/robot/navigation/__init__.py -> /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/navigation
+[1.967s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/__init__.py to __init__.cpython-311.pyc
+[1.968s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/navigation_node.py to navigation_node.cpython-311.pyc
+[1.970s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/mobility/__init__.py to __init__.cpython-311.pyc
+[1.970s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/collection/__init__.py to __init__.cpython-311.pyc
+[1.971s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/mobility_node.py to mobility_node.cpython-311.pyc
+[1.972s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision/__init__.py to __init__.cpython-311.pyc
+[1.973s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision/video.py to video.cpython-311.pyc
+[1.974s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/collection_node.py to collection_node.cpython-311.pyc
+[1.975s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/vision_node.py to vision_node.cpython-311.pyc
+[1.976s] byte-compiling /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot/navigation/__init__.py to __init__.cpython-311.pyc
+[1.976s] running install_data
+[1.977s] creating /home/pi/egb320/install/robot/share/ament_index
+[1.978s] creating /home/pi/egb320/install/robot/share/ament_index/resource_index
+[1.978s] creating /home/pi/egb320/install/robot/share/ament_index/resource_index/packages
+[1.978s] copying resource/robot -> /home/pi/egb320/install/robot/share/ament_index/resource_index/packages
+[1.979s] copying package.xml -> /home/pi/egb320/install/robot/share/robot
+[1.979s] running install_egg_info
+[1.983s] Copying ../../../../build/robot/robot.egg-info to /home/pi/egb320/install/robot/lib/python3.11/site-packages/robot-0.0.0-py3.11.egg-info
+[1.985s] running install_scripts
+[2.037s] Installing collection script to /home/pi/egb320/install/robot/lib/robot
+[2.042s] Installing mobility script to /home/pi/egb320/install/robot/lib/robot
+[2.042s] Installing navigation script to /home/pi/egb320/install/robot/lib/robot
+[2.044s] Installing vision script to /home/pi/egb320/install/robot/lib/robot
+[2.046s] writing list of installed files to '/home/pi/egb320/build/robot/install.log'
+[2.156s] Invoked command in '/home/pi/egb320/software/ros_ws/src/robot' returned '0': PIXI_PROMPT=(egb320) PS1=(egb320) \[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m\] PYTHONPATH=/home/pi/egb320/build/robot/prefix_override:/home/pi/egb320/.pixi/envs/default/lib/python3.11/site-packages/colcon_core/task/python/colcon_distutils_commands:/home/pi/egb320/install/robot/lib/python3.11/site-packages:${PYTHONPATH} /home/pi/egb320/.pixi/envs/default/bin/python3.11 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/robot build --build-base /home/pi/egb320/build/robot/build install --record /home/pi/egb320/build/robot/install.log --single-version-externally-managed install_data

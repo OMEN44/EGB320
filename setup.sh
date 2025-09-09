@@ -1,0 +1,1 @@
+sudo apt install swig libgtk2.0-dev pkg-config
