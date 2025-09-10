@@ -171,24 +171,19 @@ if __name__ == '__main__':
                         omega = k_omega * e_theta
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
-                        print(f"Moving to picking bay marker 1 | v={v:.2f} m/s, ω={omega:.2f} rad/s")
                     else:
                         # No valid direction -> gentle spin to search
                         bot.SetTargetVelocities(0.0, 0.15)
-                        print("No valid best bearing; spinning to search...")
 
                     if markerDistance < 0.3:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Stopped near picking bay 1")
                         state = 2
                 else:
                     # Lost the picking station -> search
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Lost Station 1; searching...")
 
             # ------------------ STATE 2: Turn to Aisle Marker 2 ------------------------------
             elif state == 2:
-                print("Turning to Aisle Marker 2")
                 # bot.GetCameraImage()
                 has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
                 if has_row2:
@@ -198,14 +193,11 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(aisleBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Centred at Aisle 2 Marker")
                         state = 3
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Aisle 2... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
-                    print("Searching for Aisle Marker 2")
 
             # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
             elif state == 3:
@@ -232,18 +224,14 @@ if __name__ == '__main__':
                         omega = k_omega * e_theta
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
-                        print(f"Moving to Aisle 2 Marker | v={v:.2f} m/s, ω={omega:.2f} rad/s")
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
-                        print("No valid best bearing (Aisle 2); spinning to search...")
 
                     if aisleDistance < 1.24:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 4
-                        # z = abs(1.968 - aisleDistance- 0.13) # EDIT THIS
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
-                    print("Lost Aisle 2 marker; spinning to reacquire...")
             
             elif state == 4:
                 has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
@@ -256,15 +244,11 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.0)
                         z = 2 - (aisleDistance + 0.575)
                         aisleDegreeIMU = math.degrees(bot.robotPose[5])
-                        print("Stopped near Aisle 2 Entrance")
-                        print(z)
                         state = 5
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Aisle 2... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
-                    print("Searching for Aisle Marker 2")
 
             elif state == 5:
                 # bot.GetCameraImage()
@@ -276,16 +260,13 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Centred at Picking Bay Marker")
                         pickingBayDistance = pickingStationRB[1][0]
                         print(pickingBayDistance)
                         state = 6
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Searching for Picking Bay Marker")
             
             elif state == 6:
                 # alpha = np.arcsin(z/pickingBayDistance)
@@ -306,12 +287,10 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    print("Turned 90° left relative to aisle")
                     forward_time = time.time()
                     state = 8
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
-                    print(f"Turning 90° left | e_theta={math.degrees(e_theta):.2f}° | ω={rotation_velocity:.2f} rad/s")
 
 
             elif state == 8:
@@ -332,15 +311,12 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(pickingBayBearing ) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Centred at Picking Bay Marker")
                         pickingBayDistance = pickingStationRB[1][0]
                         state = 10
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Searching for Picking Bay Marker")
 
             # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
             elif state == 10:
@@ -365,18 +341,14 @@ if __name__ == '__main__':
                         omega = k_omega * e_theta
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
-                        print(f"Moving to Aisle 2 Marker | v={v:.2f} m/s, ω={omega:.2f} rad/s")
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
-                        print("No valid best bearing (Aisle 2); spinning to search...")
 
                     if pickingStationRB[1][0] < 0.185:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Stopped near Aisle 2 Entrance")
                         state = 11
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
-                    print("Lost Aisle 2 marker; spinning to reacquire...")
 
             elif state == 11:
                 has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
@@ -387,33 +359,21 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(pickingBayBearing ) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Centred at Picking Bay Marker")
                         state = 12
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Searching for Picking Bay Marker")
 
             elif state == 12:
                 success, station = bot.CollectItem(closest_picking_station=True)
                 if success:
-                    print(f"Collected item from station {station}")
                     state = 13
-                    # turn_time = time.time()
-                    # flipTurnSpeed = 0.4
-                    # flipTurnDuration = ((math.pi) / flipTurnSpeed) 
                 else:
-                    print("Failed to collect item")   
                     state = 11            
 
 
             elif state == 13:
-                # bot.GetCameraImage()
-                # bot.SetTargetVelocities(0.0, flipTurnSpeed)
-                # if (time.time() - turn_time >= flipTurnDuration):
-                #     state = 14
                 if rowMarkerRB:
                     for i, row in enumerate(rowMarkerRB):
                         if row is not None and len(row) > 0:
@@ -422,10 +382,8 @@ if __name__ == '__main__':
                             state = 14
                         else:
                             bot.SetTargetVelocities(0.0, 0.2)
-                            print("Searching for Picking Bay Marker")       
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Searching for Picking Bay Marker")   
                                          
             elif state == 14:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
@@ -436,14 +394,11 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(rowBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("Centred at Picking Bay Marker")
                         state = 15
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
-                        print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                    print("Searching for Picking Bay Marker")
 
             elif state == 15:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
@@ -492,12 +447,10 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    print("Turned 90° left relative to aisle")
                     forward_time = time.time()
                     state = 17
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
-                    print(f"Turning 90° left | e_theta={math.degrees(e_theta):.2f}° | ω={rotation_velocity:.2f} rad/s")
 
             elif state == 17:
                 target_heading = math.radians(aisleDegreeIMU)  - np.pi/2# radians
@@ -511,56 +464,59 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    print("Turned 90° left relative to aisle")
                     forward_time = time.time()
                     state = 18
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
-                    print(f"Turning 90° left | e_theta={math.degrees(e_theta):.2f}° | ω={rotation_velocity:.2f} rad/s")
             
             elif state == 18:
                 bot.SetTargetVelocities(0.1, 0.0)
-                if (time.time() - forward_time >= 1.0):
+                if (time.time() - forward_time >= 0.5):
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 19
             
             elif state == 19:
-                target_heading = math.radians(aisleDegreeIMU) # radians
-                current_heading = bot.robotPose[5]  # radians
-
+                # Align with aisle heading
+                target_heading = math.radians(aisleDegreeIMU)
+                current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
-                kp = 0.5  # Adjust gain as needed
+                kp = 0.5
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):  # close enough to target
+                if abs(e_theta) < np.radians(1):  
                     bot.SetTargetVelocities(0.0, 0.0)
+
+                    # Now check if marker is visible and within acceptable bearing
                     has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
                     if has_row2:
                         aisleBearing = math.degrees(rowMarkerRB[1][1])
-                        if abs(aisleBearing) < 3:
+                        if abs(aisleBearing) < 5:   # acceptable entry window
                             state = 20
                         else:
                             state = 21
+                    else:
+                        state = 21
                 else:
-                    state = 21
+                    bot.SetTargetVelocities(0.0, rotation_velocity)
 
             elif state == 20:
                 has_row = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
+
                 if has_row:
                     markerDistance = rowMarkerRB[1][0]
-                    # Gather all detected objects into one list
+                    # --- Potential fields toward row marker ---
                     all_obstacles = []
                     for group in (obstaclesRB, shelfRB):
                         if group:
-                            all_obstacles.extend(group)   # merge lists
+                            all_obstacles.extend(group)
                     U_rep = repulsiveField(all_obstacles, phi)
                     U_att = attractiveField(rowMarkerRB[1], phi)
                     best_bearing = bestBearing(U_att, U_rep, phi)
 
                     if best_bearing is not None:
-                        theta = 0.0  # if you have a robot heading API, replace this with it
+                        theta = 0.0
                         e_theta = angle_wrap(best_bearing - theta)
 
                         k_omega = 0.3
@@ -571,35 +527,32 @@ if __name__ == '__main__':
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
                     else:
-                        # No valid direction -> gentle spin to search
                         bot.SetTargetVelocities(0.0, 0.15)
+
                     if markerDistance < 0.5:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 22
-                else:
-                    # Lost the picking station -> search
-                    bot.SetTargetVelocities(0.0, 0.2)
-            
-            elif state == 21:
-                target_heading = math.radians(aisleDegreeIMU) - np.pi/2  # radians
-                current_heading = bot.robotPose[5]  # radians
 
+                else:
+                    state = 21
+
+
+            elif state == 21:
+                # Overshoot correction
+                target_heading = math.radians(aisleDegreeIMU) - np.pi/2
+                current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
                 kp = 0.5
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):  # aligned
+                if abs(e_theta) < np.radians(1):
                     bot.SetTargetVelocities(0.0, 0.0)
-                    print("Aligned correctly after overshoot correction")
-                    state = 20   #go to marker approach, not back to forward drive
+                    forward_time = time.time()
+                    state = 18
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
-                    print(f"Correcting heading | e_theta={math.degrees(e_theta):.2f}° | ω={rotation_velocity:.2f} rad/s")
-
-
-
             
             elif state == 22:
                 bot.SetTargetVelocities(0.0, 0.0)
