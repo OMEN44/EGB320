@@ -242,8 +242,7 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(aisleBearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        z = 2 - (aisleDistance + 0.575)
-                        aisleDegreeIMU = math.degrees(bot.robotPose[5])
+                        aisleIMU = bot.robotPose[5]
                         state = 5
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
@@ -251,7 +250,6 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, -0.2)
 
             elif state == 5:
-                # bot.GetCameraImage()
                 has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_pickingbay:
                     pickingBayBearing = math.degrees(pickingStationRB[1][1])
@@ -261,22 +259,36 @@ if __name__ == '__main__':
                     if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
                         pickingBayDistance = pickingStationRB[1][0]
-                        print(pickingBayDistance)
+                        bearingPickingBay = bot.robotPose[5]
                         state = 6
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
             
-            elif state == 6:
-                # alpha = np.arcsin(z/pickingBayDistance)
-                distanceForward = np.sqrt(pickingBayDistance**2 - z**2)
-                # distanceForward = pickingBayDistance*np.cos(alpha)
+            elif state == 6: # FIX THIS SECTION
+                # Print for debugging
+                print("Aisle heading (deg):", math.degrees(aisleIMU))
+                print("Bearing to picking bay (deg):", math.degrees(bearingPickingBay))
+                print("Relative bearing to perpendicular (deg):", math.degrees(bearingPickingBay - aisleIMU - np.pi/2))
+
+                # Perpendicular heading (90° from aisle)
+                perp_heading = aisleIMU + np.pi/2  
+
+                # Angle between perpendicular and the line to picking bay
+                delta = angle_wrap(bearingPickingBay - perp_heading)
+
+                # Projected distance along perpendicular
+                distanceForward = pickingBayDistance * np.sin(delta)  # Use sin, not cos
+
+                print("Forward distance along perpendicular (m):", distanceForward)
+
+
                 state = 7
 
             elif state == 7:
                 # Desired heading: 90 degrees left from current aisle orientation
-                target_heading = math.radians(aisleDegreeIMU) + np.pi/2  # radians
+                target_heading = aisleIMU + np.pi/2  # radians
                 current_heading = bot.robotPose[5]  # radians
 
                 e_theta = angle_wrap(target_heading - current_heading)
@@ -296,7 +308,7 @@ if __name__ == '__main__':
             elif state == 8:
                 forward_vela = 0.1
                 duration_forward = distanceForward / abs(forward_vela) 
-                if (time.time() - forward_time >= duration_forward * 0.23):
+                if (time.time() - forward_time >= duration_forward):
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 9
                 bot.SetTargetVelocities(forward_vela, 0.0)
@@ -309,7 +321,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * pickingBayBearing 
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(pickingBayBearing ) < 1:
+                    if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
                         pickingBayDistance = pickingStationRB[1][0]
                         state = 10
@@ -436,7 +448,7 @@ if __name__ == '__main__':
 
             elif state == 16:
                 
-                target_heading = math.radians(aisleDegreeIMU)# radians
+                target_heading = aisleIMU# radians
                 current_heading = bot.robotPose[5]  # radians
 
                 e_theta = angle_wrap(target_heading - current_heading)
@@ -453,7 +465,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
             elif state == 17:
-                target_heading = math.radians(aisleDegreeIMU)  - np.pi/2# radians
+                target_heading = aisleIMU  - np.pi/2# radians
                 current_heading = bot.robotPose[5]  # radians
 
                 e_theta = angle_wrap(target_heading - current_heading)
@@ -477,7 +489,7 @@ if __name__ == '__main__':
             
             elif state == 19:
                 # Align with aisle heading
-                target_heading = math.radians(aisleDegreeIMU)
+                target_heading = aisleIMU
                 current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
@@ -539,7 +551,7 @@ if __name__ == '__main__':
 
             elif state == 21:
                 # Overshoot correction
-                target_heading = math.radians(aisleDegreeIMU) - np.pi/2
+                target_heading = aisleIMU - np.pi/2
                 current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
