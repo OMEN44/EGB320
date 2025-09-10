@@ -9,6 +9,8 @@ class Vision(Node):
         self.get_logger().info('Vision node has been started.')
         v.useVideo()
 
+        print('changes here')
+
 def main():
     rclpy.init()
     vision_node = Vision()
