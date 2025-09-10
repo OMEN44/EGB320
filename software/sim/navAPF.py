@@ -70,11 +70,11 @@ sceneParameters.pickingStationContents[1] = warehouseObjects.mug
 sceneParameters.pickingStationContents[2] = warehouseObjects.bottle
 
 sceneParameters.obstacle0_StartingPosition = -1
-sceneParameters.obstacle1_StartingPosition = [-0.35, -0.15]
-sceneParameters.obstacle2_StartingPosition = [-0.60, -0.20]
+# sceneParameters.obstacle1_StartingPosition = [-0.35, -0.15]
+# sceneParameters.obstacle2_StartingPosition = [-0.60, -0.20]
 
-# sceneParameters.obstacle1_StartingPosition = -1
-# sceneParameters.obstacle2_StartingPosition = -1
+sceneParameters.obstacle1_StartingPosition = -1
+sceneParameters.obstacle2_StartingPosition = -1
 
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
@@ -242,16 +242,33 @@ if __name__ == '__main__':
 
                     if aisleDistance < 1.20:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        # z = abs(1.968 - aisleDistance- 0.13) # EDIT THIS
-                        z = 0.3
-                        print("Stopped near Aisle 2 Entrance")
-                        print(z)
                         state = 4
+                        # z = abs(1.968 - aisleDistance- 0.13) # EDIT THIS
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
                     print("Lost Aisle 2 marker; spinning to reacquire...")
             
             elif state == 4:
+                has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
+                if has_row2:
+                    aisleBearing = math.degrees(rowMarkerRB[1][1])
+                    kp = 0.01
+                    rotation_velocity = kp * aisleBearing
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(aisleBearing) < 0.4:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        z = 2 - (aisleDistance + 0.55)
+                        print("Stopped near Aisle 2 Entrance")
+                        print(z)
+                        state = 5
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
+                        print(f"Aligning with Aisle 2... bearing: {aisleBearing:.2f}°")
+                else:
+                    bot.SetTargetVelocities(0.0, -0.2)
+                    print("Searching for Aisle Marker 2")
+
+            elif state == 5:
                 # bot.GetCameraImage()
                 has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_pickingbay:
@@ -259,12 +276,12 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * pickingBayBearing 
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(pickingBayBearing ) < 1:
+                    if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
                         print("Centred at Picking Bay Marker")
                         pickingBayDistance = pickingStationRB[1][0]
                         print(pickingBayDistance)
-                        state = 5
+                        state = 6
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                         print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
@@ -272,7 +289,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, 0.2)
                     print("Searching for Picking Bay Marker")
             
-            elif state == 5:
+            elif state == 6:
                 # alpha = np.arcsin(z/pickingBayDistance)
                 alpha = np.arctan2(z, np.sqrt(pickingBayDistance**2 - z**2))
                 distanceForward = np.sqrt(pickingBayDistance**2 - z**2)
@@ -280,26 +297,26 @@ if __name__ == '__main__':
                 turn_time = time.time()
                 print("ALPHA")
                 print(alpha)
-                state = 6
+                state = 7
 
-            elif state == 6:
+            elif state == 7:
                 omega = -0.2
                 duration_turn = alpha / abs(omega)  
                 bot.SetTargetVelocities(0.0, omega)
                 if time.time() - turn_time >= duration_turn:
                     bot.SetTargetVelocities(0.0, 0.0)
                     forward_time = time.time()
-                    state = 7
+                    state = 8
 
-            elif state == 7:
+            elif state == 8:
                 forward_vela = 0.1
                 duration_forward = distanceForward / abs(forward_vela) 
-                if (time.time() - forward_time >= duration_forward * 0.18):
+                if (time.time() - forward_time >= duration_forward * 0.19):
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 8
+                    state = 9
                 bot.SetTargetVelocities(forward_vela, 0.0)
     
-            elif state == 8:
+            elif state == 9:
                 # bot.GetCameraImage()
                 has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_pickingbay:
@@ -311,7 +328,7 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.0)
                         print("Centred at Picking Bay Marker")
                         pickingBayDistance = pickingStationRB[1][0]
-                        state = 9
+                        state = 10
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                         print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
@@ -320,7 +337,7 @@ if __name__ == '__main__':
                     print("Searching for Picking Bay Marker")
 
             # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
-            elif state == 9:
+            elif state == 10:
                 has_row2 = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_row2:
                     all_obstacles = []
@@ -347,27 +364,55 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.15)
                         print("No valid best bearing (Aisle 2); spinning to search...")
 
-                    if pickingStationRB[1][0] < 0.21:
+                    if pickingStationRB[1][0] < 0.19:
                         bot.SetTargetVelocities(0.0, 0.0)
                         print("Stopped near Aisle 2 Entrance")
-                        state = 10
+                        state = 11
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
                     print("Lost Aisle 2 marker; spinning to reacquire...")
 
-            elif state == 10:
+            elif state == 11:
+                has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
+                if has_pickingbay:
+                    pickingBayBearing = math.degrees(pickingStationRB[1][1])
+                    kp = 0.01
+                    rotation_velocity = kp * pickingBayBearing 
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(pickingBayBearing ) < 1:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        print("Centred at Picking Bay Marker")
+                        state = 12
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
+                        print(f"Aligning with Picking Bay Marker... bearing: {aisleBearing:.2f}°")
+                else:
+                    bot.SetTargetVelocities(0.0, 0.2)
+                    print("Searching for Picking Bay Marker")
+
+            elif state == 12:
                 success, station = bot.CollectItem(closest_picking_station=True)
                 if success:
                     print(f"Collected item from station {station}")
-                    state = 11  
+                    state = 13
+                    turn_time = time.time()
+                    flipTurnSpeed = 0.2
+                    flipTurnDuration = ((math.pi) / flipTurnSpeed) 
                 else:
-                    print("Failed to collect item")
-                
-                
+                    print("Failed to collect item")               
 
 
-            else:
-                print("Wagabobo")
+            elif state == 13:
+                # bot.GetCameraImage()
+                bot.SetTargetVelocities(0.0, flipTurnSpeed)
+                if (time.time() - turn_time >= flipTurnDuration):
+                    state = 14
+
+            elif state == 14:
+                bot.GetCameraImage()
+                bot.SetTargetVelocities(0.0, 0.0)
+
+                
 
     except KeyboardInterrupt:
         print("\nStopping simulation...")
