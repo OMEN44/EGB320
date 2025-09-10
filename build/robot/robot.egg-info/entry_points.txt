@@ -1,6 +1,0 @@
-[console_scripts]
-collection = robot.collection:main
-mobility = robot.mobility:main
-navigation = robot.navigation:main
-vision = robot.vision_node:main
-

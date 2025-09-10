@@ -1,4 +1,33 @@
-# ROS2
-log/
+# Build artifacts
 build/
 install/
+log/
+
+# Python-specific
+__pycache__/
+*.pyc
+
+# C++-specific
+*.o
+*.so
+*.a
+*.d
+
+# Generated documentation
+*.dox
+*.wikidoc
+
+# IDE-specific files (e.g., Eclipse, Qt Creator)
+.project
+.cproject
+CMakeLists.txt.user*
+
+# ROS 2 specific
+*.rosinstall
+*.repos
+*.vcstool
+
+# Environment variables
+.env
+.venv
+venv/
