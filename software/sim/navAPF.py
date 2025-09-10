@@ -8,6 +8,7 @@ import time
 
 obstacle_width = 0.5  # m
 max_range = 2.5      # m
+message = "HELLO"
 
 # ---------------------------
 # Potential fields
