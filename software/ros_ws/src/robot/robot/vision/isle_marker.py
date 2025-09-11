@@ -7,28 +7,16 @@ import random
 
 isleMarkerCount = []
 
-FOCAL_LENGTH = (32 / 100) * 7
+# Calculated using (isle marker width in px * distance to isle marker in cm) / real isle marker width in cm
+FOCAL_LENGTH = (32 * 100) / 7
 
 def findIsleMarkers(self, frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # make a mask for the color black
-    # lower_black = np.array([0, 0, 0])
-    # upper_black = np.array([255, 140, 110])
-
-    # mask = cv2.inRange(hsv, lower_black, upper_black)
-    # openingValue = 10
-    # # erode and dilate in a circle
-    # circleMatrix = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (openingValue, openingValue))
-    # mask = cv2.erode(mask, circleMatrix)
-    # mask = cv2.dilate(mask, circleMatrix)
-
-    # contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
-
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.medianBlur(gray, 5)
 
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 1,
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 5,
                                param1=100, param2=30,
                                minRadius=1, maxRadius=30)
     
@@ -51,17 +39,8 @@ def findIsleMarkers(self, frame):
 
     count = np.round(np.mean(isleMarkerCount))
     distance = ((FOCAL_LENGTH * 7) / (2 * avgRadius)) if avgRadius != 0 else -1
-    distance *= 2
 
     self.publisher.publish(String(data=f'isle_markers: {count}, width: {np.round(avgRadius * 2, 2)}px, distance: {distance} cm'))
-
-    # isle = []
-
-
-    # for cnt in contours:
-    #     area = cv2.contourArea(cnt)
-    #     if area > 100 and area < 1200:
-    #         outputFrame = cv2.drawContours(outputFrame, [cnt], -1, (0, 255, 0), 2)
 
     return outputFrame
 
@@ -70,7 +49,7 @@ def findPickingStation(self, frame):
 
     # make a mask for the color black
     lower_black = np.array([0, 0, 0])
-    upper_black = np.array([255, 140, 110])
+    upper_black = np.array([255, 255, 35])
 
     mask = cv2.inRange(hsv, lower_black, upper_black)
     openingValue = 10
@@ -79,14 +58,40 @@ def findPickingStation(self, frame):
 
     contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
 
+    # 0: (x,y) position
+    # 1: number of markers
+    # 2: average width
+    isleClusters = []
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 100 and area < 1200:
+        if area > 70 and area < 1200:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
-            if len(approx) == 4 and cv2.isContourConvex(approx):
+            if cv2.isContourConvex(approx) and len(approx) == 4:
                 outputFrame = cv2.drawContours(frame, [approx], -1, (0, 255, 0), 2)
-            else:
-                outputFrame = cv2.drawContours(frame, [approx], -1, (255, 0, 0), 2)
+                
+                rect = cv2.boundingRect(approx)
+                if len(isleClusters) == 0:
+                    isleClusters.append([[rect[0] + rect[2] / 2, rect[1] + rect[3] / 2], 1, rect[2]])
+                else:
+                    newCluster = True
+                    for cluster in isleClusters:
+                        if abs(np.sqrt((cluster[0][0] - rect[0])**2 + (cluster[0][1] - rect[1])**2)) < (rect[2] * 5):
+                            cluster[0][0] = (cluster[0][0] + rect[0] + (rect[2] / 2)) / 2
+                            cluster[0][1] = (cluster[0][1] + rect[1] + (rect[3] / 2)) / 2
+                            cluster[1] += 1
+                            cluster[2] = (cluster[2] + rect[2])
+                            newCluster = False
+                            break
+                    if newCluster:
+                        isleClusters.append([[rect[0] + rect[2] / 2, rect[1] + rect[3] / 2], 1, rect[2]])
+
+
+    for cluster in isleClusters:
+        cluster[2] = cluster[2] / cluster[1]
+        # draw a dot in the middle of each cluster and label with number of markers
+        cv2.circle(outputFrame, (int(cluster[0][0]), int(cluster[0][1])), 5, (0, 0, 255), -1)
+        cv2.putText(outputFrame, f'{cluster[1]}', (int(cluster[0][0]) - 5, int(cluster[0][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
 
     

@@ -5,6 +5,8 @@ from std_msgs.msg import String
 import robot.vision.video as v
 import robot.vision.image as i
 
+from time import sleep
+
 WIDTH = 640
 HEIGHT = 480
 
@@ -20,7 +22,14 @@ class Vision(Node):
         if (video):
             v.useVideo(self)
         else:
-            i.useImage(self, '2')
+            # while True:
+            i.useImage(self, '1mb')
+            # sleep(3)
+            # i.useImage(self, '1mb')
+            # sleep(3)
+            # i.useImage(self, '1mc')
+            # sleep(3)
+
 
 def main():
     rclpy.init()

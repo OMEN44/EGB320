@@ -15,6 +15,6 @@ def proccess(self, frame):
 
     img1 = findPickingStation(self, img1)
 
-    img2 = mask(frame, np.array([0,0,0]), np.array([255, 140, 110]), 9, True)
+    img2 = mask(frame, np.array([0,0,0]), np.array([255, 255, 35]), 9, True)
 
     return [img1, img2, frame]

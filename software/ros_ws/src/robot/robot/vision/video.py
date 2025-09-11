@@ -6,6 +6,7 @@ import time
 from std_msgs.msg import String
 
 from robot.vision.pipeline import proccess
+from robot.vision.image import setupFakeCam
 
 WIDTH = 640
 HEIGHT = 480
@@ -25,7 +26,8 @@ def useVideo(self):
 
         now = time.time()
 
-        # frame = mask(frame, np.array([0, 20, 0]), np.array([179, 205, 255]), 7, True)
+        frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/picking1.jpg')
+
         frames = proccess(self, frame)
 
         for i in range(len(frames)):
@@ -73,11 +75,3 @@ def setupCameraWithDefaults(auto_wb=True, auto_exposure=True, brightness=0, cont
     cap.set(cv2.CAP_PROP_EXPOSURE, exposure) # 10
 
     return cap
-
-
-def setupFakeCam():
-    camera1 = pyfakewebcam.FakeWebcam('/dev/video4', WIDTH, HEIGHT)
-    camera2 = pyfakewebcam.FakeWebcam('/dev/video5', WIDTH, HEIGHT)
-    camera3 = pyfakewebcam.FakeWebcam('/dev/video6', WIDTH, HEIGHT)
-
-    return [camera1, camera2, camera3]
