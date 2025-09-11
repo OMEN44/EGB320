@@ -97,7 +97,7 @@ robotParameters.sync = False
 # ---------------------------
 if __name__ == '__main__':
     try:
-        state = 0
+        state = -1
         print("Press Ctrl+C to stop the simulation\n")
         print("Connecting to CoppeliaSim...")
 
@@ -131,7 +131,53 @@ if __name__ == '__main__':
             # print(math.degrees(bot.robotPose[5]))
             # ------------------ STATE 0: Find / center on Picking Station 1 ------------------
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-            if state == 0:
+
+            if state == -1:
+                if shelfRB and any(row is not None for row in shelfRB):
+                    print("CAN SEE SHELF")
+                    bot.SetTargetVelocities(0.0, -0.2)
+                else:
+                    state = -1.5
+                    print("NO SHELF SPOTTED")
+
+                    
+
+            elif state == -1.5:
+                if shelfRB and any(row is not None for row in shelfRB):
+                    for i, row in enumerate(shelfRB):
+                        if row is not None and len(row) > 0:
+                            rowBearing = row[1]
+                            rowIndex = i
+                            state = -2
+                            break
+                    bot.SetTargetVelocities(0.0, 0.0)
+                else:
+                    bot.SetTargetVelocities(0.0, 0.2)
+
+
+            elif state == -2:
+                has_row = (shelfRB and shelfRB[rowIndex] is not None and len(shelfRB[rowIndex]) > 0)
+                if has_row:
+                    rowBearing = math.degrees(shelfRB[rowIndex][1])
+                    kp = 0.01
+                    rotation_velocity = kp * rowBearing 
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(rowBearing) < 1:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        state = -3
+                        forward_time = time.time()
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
+                else:
+                    bot.SetTargetVelocities(0.0, 0.2)
+
+            elif state == -3:
+                bot.SetTargetVelocities(0.1, 0.0)
+                if (time.time() - forward_time >= 0.5):
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 0
+
+            elif state == 0:
                 has_ps1 = (pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0)
                 if has_ps1:
                     bearing = pickingStationRB[0][1]  # radians
@@ -243,50 +289,11 @@ if __name__ == '__main__':
                     if abs(aisleBearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
                         aisleIMU = bot.robotPose[5]
-                        state = 5
+                        state = 7
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
-
-            elif state == 5:
-                # has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
-                # if has_pickingbay:
-                #     pickingBayBearing = math.degrees(pickingStationRB[1][1])
-                #     kp = 0.01
-                #     rotation_velocity = kp * pickingBayBearing 
-                #     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                #     if abs(pickingBayBearing) < 1:
-                #         bot.SetTargetVelocities(0.0, 0.0)
-                #         pickingBayDistance = pickingStationRB[1][0]
-                #         bearingPickingBay = bot.robotPose[5]
-                #         state = 6
-                #     else:
-                #         bot.SetTargetVelocities(0.0, rotation_velocity)
-                # else:
-                #     bot.SetTargetVelocities(0.0, 0.2)
-
-                state = 7
-            
-            elif state == 6: # FIX THIS SECTION
-                # Print for debugging
-                # print("Aisle heading (deg):", math.degrees(aisleIMU))
-                # print("Bearing to picking bay (deg):", math.degrees(bearingPickingBay))
-                # print("Relative bearing to perpendicular (deg):", math.degrees(bearingPickingBay - aisleIMU - np.pi/2))
-
-                # # Perpendicular heading (90° from aisle)
-                # perp_heading = aisleIMU + np.pi/2  
-
-                # # Angle between perpendicular and the line to picking bay
-                # delta = angle_wrap(bearingPickingBay - perp_heading)
-
-                # # Projected distance along perpendicular
-                # distanceForward = pickingBayDistance * np.sin(delta)  # Use sin, not cos
-
-                # print("Forward distance along perpendicular (m):", distanceForward)
-
-
-                state = 7
 
             elif state == 7:
                 # Desired heading: 90 degrees left from current aisle orientation
@@ -323,7 +330,7 @@ if __name__ == '__main__':
                 print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
                 # stop when within ±1 cm of 0.45 m
-                if abs(error) <= 0.01:
+                if abs(error) <= 0.015:
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 9
 
@@ -374,7 +381,7 @@ if __name__ == '__main__':
 
                     if pickingStationRB[1][0] < 0.185:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 11
+                        state = 12
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
 
@@ -462,24 +469,6 @@ if __name__ == '__main__':
                     # Lost the picking station -> search
                     bot.SetTargetVelocities(0.0, 0.2)
 
-            elif state == 16:
-                
-                target_heading = aisleIMU# radians
-                current_heading = bot.robotPose[5]  # radians
-
-                e_theta = angle_wrap(target_heading - current_heading)
-
-                kp = 0.5  # Adjust gain as needed
-                rotation_velocity = kp * e_theta
-                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-
-                if abs(e_theta) < np.radians(1):  # close enough to target
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    forward_time = time.time()
-                    state = 17
-                else:
-                    bot.SetTargetVelocities(0.0, rotation_velocity)
-
             elif state == 17:
                 target_heading = aisleIMU  - np.pi/2# radians
                 current_heading = bot.robotPose[5]  # radians
@@ -492,7 +481,6 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    forward_time = time.time()
                     state = 18
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
@@ -502,32 +490,6 @@ if __name__ == '__main__':
                 if (time.time() - forward_time >= 0.5):
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 22
-            
-            elif state == 19:
-                # Align with aisle heading
-                target_heading = aisleIMU
-                current_heading = bot.robotPose[5]
-                e_theta = angle_wrap(target_heading - current_heading)
-
-                kp = 0.5
-                rotation_velocity = kp * e_theta
-                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-
-                if abs(e_theta) < np.radians(1):  
-                    bot.SetTargetVelocities(0.0, 0.0)
-
-                    # Now check if marker is visible and within acceptable bearing
-                    has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
-                    if has_row2:
-                        aisleBearing = math.degrees(rowMarkerRB[1][1])
-                        if abs(aisleBearing) < 5:   # acceptable entry window
-                            state = 20
-                        else:
-                            state = 21
-                    else:
-                        state = 21
-                else:
-                    bot.SetTargetVelocities(0.0, rotation_velocity)
 
             elif state == 20:
                 has_row = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
@@ -631,27 +593,80 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
             elif state == 25:
-                target_distance = 0.1   # 11 cm
+                target_distance = 0.06   # 7 cm
                 error = distance - target_distance
 
-                # proportional control
-                kp = 0.5   # tune lower here since it's a very small range
-                v = kp * error
+                kp = 0.3   # proportional gain
 
-                # clamp velocity: slower because we're so close
-                v = max(min(v, 0.05), 0.01)
-
-                bot.SetTargetVelocities(v, 0.0)
-                print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-
-                # stop when within ±0.005 m (0.5 cm)
-                if abs(error) <= 0.05:
+                if error-0.009 <= 0.01:  # within ±1 cm
+                    v = 0.0
                     bot.SetTargetVelocities(0.0, 0.0)
+                    print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
                     state = 26
+                else:
+                    v = kp * error
+                    v = max(min(v, 0.05), -0.05)  # clamp both directions
+                    bot.SetTargetVelocities(v, 0.0)
+                    print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+
 
 
             elif state == 26:
                 bot.SetTargetVelocities(0.0, 0.0)
+                bot.DropItem()
+                bot.DropItemInClosestShelfBay()
+                print("Item dropped successfully.")
+                backTime = time.time()
+                state = 27
+
+            elif state == 27:
+                if (time.time() - backTime >= 0.2):
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 28
+                bot.SetTargetVelocities(-0.1, 0.0)
+
+            elif state == 28:
+                target_heading = aisleIMU + math.pi
+                current_heading = bot.robotPose[5]
+                e_theta = angle_wrap(target_heading - current_heading)
+
+                kp = 0.5
+                rotation_velocity = kp * e_theta
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+                if abs(e_theta) < np.radians(1):
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 29
+                else:
+                    bot.SetTargetVelocities(0.0, rotation_velocity)
+                
+            elif state == 29:
+                target_distance = 0.45
+                error = distance - target_distance
+                
+                # proportional control
+                kp = 0.5   # <-- tune this value
+                v = kp * error
+                
+                # clamp velocity
+                v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
+                
+                bot.SetTargetVelocities(v, 0.0)
+                print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                
+                # within tolerance
+                if abs(error) <= 0.1:  # 1 cm offset tolerance
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 100
+
+
+
+
+
+
+            elif state == 100:
+                bot.SetTargetVelocities(0.0, 0.0)
+            
 
     except KeyboardInterrupt:
         print("\nStopping simulation...")
