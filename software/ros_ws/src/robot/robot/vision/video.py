@@ -3,15 +3,19 @@ import pyfakewebcam
 import numpy as np
 import time
 
-# import robot.vision.isle_marker as isle_marker
+from std_msgs.msg import String
+
+from robot.vision.pipeline import proccess
 
 WIDTH = 640
 HEIGHT = 480
-FPS = 15
+FPS = 60
 
-def useVideo():
+def useVideo(self):
     sink = setupFakeCam()
-    cap = setupCamera()
+    # cap = setupCameraWithDefaults(auto_exposure=False, exposure=1, gain=1, brightness=-64)
+    # cap = setupCameraWithDefaults(auto_exposure=False, exposure=10, auto_wb=False)
+    cap = setupCameraWithDefaults()
 
     while True:
         ret, frame = cap.read()
@@ -21,14 +25,13 @@ def useVideo():
 
         now = time.time()
 
-        # isle_marker.findMarkers(frame)
-        cv2.GaussianBlur(frame, (7, 7), 0, frame)
+        # frame = mask(frame, np.array([0, 20, 0]), np.array([179, 205, 255]), 7, True)
+        frames = proccess(self, frame)
 
-        frame = cv2.putText(frame, f"FPS: {1/(time.time()-now):.2f}", (10, HEIGHT - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        for i in range(len(frames)):
+            frames[i] = cv2.putText(frames[i], f'FPS: {int(1/(time.time()-now))}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            sink[i].schedule_frame(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB))
 
-        sink[0].schedule_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        sink[1].schedule_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        sink[2].schedule_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
 
 def setupCamera():
@@ -40,12 +43,37 @@ def setupCamera():
 
     # Disable auto exposure
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
-    cap.set(cv2.CAP_PROP_EXPOSURE, 10)
+    cap.set(cv2.CAP_PROP_EXPOSURE, 5)
     # Disable auto white balance
     cap.set(cv2.CAP_PROP_AUTO_WB, 0)
-    # cap.set(cv2.CAP_PROP_WB_TEMPERATURE, 4600)
+    cap.set(cv2.CAP_PROP_WB_TEMPERATURE, 4600)
+
+    cap.set(cv2.CAP_PROP_BRIGHTNESS, -0)
+    cap.set(cv2.CAP_PROP_CONTRAST, 3)
 
     return cap
+
+# takes arguments for each camera setting all with default values
+def setupCameraWithDefaults(auto_wb=True, auto_exposure=True, brightness=0, contrast=3, saturation=56, hue=0, white_balance=4600, gamma=84, gain=1, temperature=4600, sharpness=2, backlight=0, exposure=156):
+    cap = cv2.VideoCapture(0)
+
+    cap.set(cv2.CAP_PROP_BRIGHTNESS, brightness)
+    cap.set(cv2.CAP_PROP_CONTRAST, contrast)
+    cap.set(cv2.CAP_PROP_SATURATION, saturation) # 69
+    cap.set(cv2.CAP_PROP_HUE, hue)
+    cap.set(cv2.CAP_PROP_IOS_DEVICE_WHITEBALANCE, white_balance)
+    cap.set(cv2.CAP_PROP_AUTO_WB, 1 if auto_wb else 0)
+    cap.set(cv2.CAP_PROP_GAMMA, gamma)
+    cap.set(cv2.CAP_PROP_GAIN, gain)
+    cap.set(cv2.CAP_PROP_WB_TEMPERATURE, white_balance)
+    cap.set(cv2.CAP_PROP_TEMPERATURE, temperature)
+    cap.set(cv2.CAP_PROP_SHARPNESS, sharpness)
+    cap.set(cv2.CAP_PROP_BACKLIGHT, backlight) # 121
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3 if auto_exposure else 1) # 3
+    cap.set(cv2.CAP_PROP_EXPOSURE, exposure) # 10
+
+    return cap
+
 
 def setupFakeCam():
     camera1 = pyfakewebcam.FakeWebcam('/dev/video4', WIDTH, HEIGHT)

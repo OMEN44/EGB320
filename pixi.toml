@@ -13,6 +13,7 @@ ros-jazzy-turtlesim = ">=1.8.3,<2"
 colcon-common-extensions = ">=0.3.0,<0.4"
 setuptools = "<=58.2.0"
 pkg-config = ">=0.29.2,<0.30"
+ros-jazzy-rosbridge-suite = ">=2.1.0,<3"
 
 [pypi-dependencies]
 pyfakewebcam = ">=0.1.0, <0.2"

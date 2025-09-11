@@ -1,15 +1,26 @@
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import String
 
 import robot.vision.video as v
+import robot.vision.image as i
+
+WIDTH = 640
+HEIGHT = 480
 
 class Vision(Node):
     def __init__(self):
         super().__init__('vision_node')
         self.get_logger().info('Vision node has been started.')
-        v.useVideo()
 
-        print('changes here')
+        self.publisher = self.create_publisher(String, 'poi', 10)
+
+        video = True
+
+        if (video):
+            v.useVideo(self)
+        else:
+            i.useImage(self, '2')
 
 def main():
     rclpy.init()
