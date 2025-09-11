@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import
 from std_msgs.msg import String
 
 import json
