@@ -1276,7 +1276,7 @@ class COPPELIA_WarehouseRobot(object):
 		try:
 			robotPosition = self.sim.getObjectPosition(self.robotHandle, -1)
 			robotOrientation = self.sim.getObjectOrientation(self.robotHandle, -1)
-			self.robotPose = [robotPosition[0], robotPosition[1], robotPosition[1], robotOrientation[0], robotOrientation[1], robotOrientation[2]]
+			self.robotPose = [robotPosition[0], robotPosition[1], robotPosition[2], robotOrientation[0], robotOrientation[1], robotOrientation[2]]
 		except Exception as e:
 			print(f"Error getting robot pose: {e}")
 
