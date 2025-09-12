@@ -21,9 +21,9 @@ setup(
     entry_points={
         'console_scripts': [
             'vision = robot.vision_node:main',
-            'navigation = robot.navigation:main',
-            'mobility = robot.mobility:main',
-            'collection = robot.collection:main',
+            'navigation = robot.navigation_node:main',
+            'mobility = robot.mobility_node:main',
+            'collection = robot.collection_node:main',
         ],
     },
 )

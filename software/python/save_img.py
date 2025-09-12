@@ -17,7 +17,7 @@ cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
 
 count = 0
 
-while count < 100:
+while count < 50:
     ret, frame = cap.read()
     if not ret:
         print("Failed to grab frame")
