@@ -9,6 +9,40 @@ import time
 obstacle_width = 0.5  # m
 max_range = 2.5      # m
 
+shelf_to_aisle = {
+    "0": ["1", np.pi/2],
+    "1": ["1", -np.pi/2],
+    "2": ["2", np.pi/2],
+    "3": ["2", -np.pi/2],
+    "4": ["3", np.pi/2],
+    "5": ["3", -np.pi/2]   # fixed duplicate key
+}
+
+pickingbay_distance_wall = {"1":0.15, "2":0.45, "3":0.75}
+shelf_distance_marker = {"1":1, "2":1, "3":0.42, "4":2}
+aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
+
+pickingBay = 1
+shelf = 2.2
+
+def getMeasurements(shelf, pickingBay):
+    # Split shelf into two parts
+    first, second = str(shelf).split(".")
+
+    # Look up picking bay wall distance
+    pickingBayWallDistance = pickingbay_distance_wall[str(pickingBay)]
+
+    # Shelf → Aisle mapping
+    aisle_id, shelfOrientation = shelf_to_aisle[first]
+
+    # Aisle wall distance and orientation
+    aisleWallDistance, aisleOrientation = aisle_distance_wall[aisle_id]
+
+    # Shelf marker distance (based on the second digit)
+    shelfMarkerDistance = shelf_distance_marker[second]
+
+    return pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation
+
 # ---------------------------
 # Potential fields
 # ---------------------------
@@ -97,6 +131,7 @@ robotParameters.sync = False
 # ---------------------------
 if __name__ == '__main__':
     try:
+        pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation = getMeasurements(shelf, pickingBay)
         state = -1
         print("Press Ctrl+C to stop the simulation\n")
         print("Connecting to CoppeliaSim...")
@@ -132,6 +167,7 @@ if __name__ == '__main__':
             # ------------------ STATE 0: Find / center on Picking Station 1 ------------------
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
 
+            # ------------------ STATE -1: Search for shelf ------------------------------
             if state == -1:
                 if shelfRB and any(row is not None for row in shelfRB):
                     print("CAN SEE SHELF")
@@ -140,8 +176,7 @@ if __name__ == '__main__':
                     state = -1.5
                     print("NO SHELF SPOTTED")
 
-                    
-
+            # ------------------ STATE -1.5: Identify closest shelf ------------------------------
             elif state == -1.5:
                 if shelfRB and any(row is not None for row in shelfRB):
                     for i, row in enumerate(shelfRB):
@@ -154,7 +189,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
 
-
+            # ------------------ STATE -2: Turn to most right shelf ------------------------------
             elif state == -2:
                 has_row = (shelfRB and shelfRB[rowIndex] is not None and len(shelfRB[rowIndex]) > 0)
                 if has_row:
@@ -171,6 +206,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
 
+            # ------------------ STATE -3: Move forward a bit to get a better view of picking bay 1 ------------------------------
             elif state == -3:
                 bot.SetTargetVelocities(0.1, 0.0)
                 if (time.time() - forward_time >= 0.5):
@@ -279,6 +315,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
             
+            # ------------------ STATE 4: Turn to Aisle Orientation ------------------------------
             elif state == 4:
                 has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
                 if has_row2:
@@ -289,13 +326,14 @@ if __name__ == '__main__':
                     if abs(aisleBearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
                         aisleIMU = bot.robotPose[5]
-                        state = 7
+                        state = 5
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
 
-            elif state == 7:
+            # ------------------ STATE 5: turn towards wall ready to drive towards front of picking bay ------------------------------
+            elif state == 5:
                 # Desired heading: 90 degrees left from current aisle orientation
                 target_heading = aisleIMU + np.pi/2  # radians
                 current_heading = bot.robotPose[5]  # radians
@@ -309,13 +347,13 @@ if __name__ == '__main__':
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     forward_time = time.time()
-                    state = 8
+                    state = 6
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
 
-
-            elif state == 8:
+            # ------------------ STATE 6: Drive to wall ------------------------------
+            elif state == 6:
                 target_distance = 0.45
                 error = distance - target_distance
 
@@ -332,11 +370,11 @@ if __name__ == '__main__':
                 # stop when within ±1 cm of 0.45 m
                 if abs(error) <= 0.015:
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 9
+                    state = 7
 
                 
-    
-            elif state == 9:
+            # ------------------ STATE 7: Turn to Picking Bay ------------------------------
+            elif state == 7:
                 # bot.GetCameraImage()
                 has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_pickingbay:
@@ -347,14 +385,14 @@ if __name__ == '__main__':
                     if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
                         pickingBayDistance = pickingStationRB[1][0]
-                        state = 10
+                        state = 8
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
 
-            # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
-            elif state == 10:
+            # ------------------ STATE 8: Drive to Picking Bay with fields ------------------------------
+            elif state == 8:
                 has_row2 = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_row2:
                     all_obstacles = []
@@ -381,46 +419,31 @@ if __name__ == '__main__':
 
                     if pickingStationRB[1][0] < 0.185:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 12
+                        state = 9
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
 
-            elif state == 11:
-                has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
-                if has_pickingbay:
-                    pickingBayBearing = math.degrees(pickingStationRB[1][1])
-                    kp = 0.01
-                    rotation_velocity = kp * pickingBayBearing 
-                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(pickingBayBearing ) < 1:
-                        bot.SetTargetVelocities(0.0, 0.0)
-                        state = 12
-                    else:
-                        bot.SetTargetVelocities(0.0, rotation_velocity)
-                else:
-                    bot.SetTargetVelocities(0.0, 0.2)
-
-            elif state == 12:
+            elif state == 9:
                 success, station = bot.CollectItem(closest_picking_station=True)
                 if success:
-                    state = 13
+                    state = 10
                 else:
-                    state = 11            
+                    state = 100            
 
 
-            elif state == 13:
+            elif state == 10:
                 if rowMarkerRB:
                     for i, row in enumerate(rowMarkerRB):
                         if row is not None and len(row) > 0:
                             rowBearing = row[1]  # or [0], depending on your data
                             rowIndex = i
-                            state = 14
+                            state = 11
                         else:
                             bot.SetTargetVelocities(0.0, 0.2)
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
                                          
-            elif state == 14:
+            elif state == 11:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
                 if has_row:
                     rowBearing = math.degrees(rowMarkerRB[rowIndex][1])
@@ -429,13 +452,13 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(rowBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 15
+                        state = 12
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
 
-            elif state == 15:
+            elif state == 12:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
                 if has_row:
                     markerDistance = rowMarkerRB[rowIndex][0]
@@ -464,12 +487,12 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.15)
                     if markerDistance < 1.24:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 17
+                        state = 13
                 else:
                     # Lost the picking station -> search
                     bot.SetTargetVelocities(0.0, 0.2)
 
-            elif state == 17:
+            elif state == 13:
                 target_heading = aisleIMU  - np.pi/2# radians
                 current_heading = bot.robotPose[5]  # radians
 
@@ -481,17 +504,45 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 18
+                    state = 14
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
-            elif state == 18:
-                bot.SetTargetVelocities(0.1, 0.0)
-                if (time.time() - forward_time >= 0.5):
+            elif state == 14:
+                target_distance = 0.8
+                error = distance - target_distance
+                
+                # proportional control
+                kp = 0.5   # <-- tune this value
+                v = kp * error
+                
+                # clamp velocity
+                v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
+                
+                bot.SetTargetVelocities(v, 0.0)
+                print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                
+                # within tolerance
+                if abs(error) <= 0.07:  # 1 cm offset tolerance
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 22
+                    state = 15
 
-            elif state == 20:
+            elif state == 15:
+                target_heading = aisleIMU
+                current_heading = bot.robotPose[5]
+                e_theta = angle_wrap(target_heading - current_heading)
+
+                kp = 0.5
+                rotation_velocity = kp * e_theta
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+                if abs(e_theta) < np.radians(1):
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 16
+                else:
+                    bot.SetTargetVelocities(0.0, rotation_velocity)
+
+            elif state == 16:
                 has_row = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
 
                 if has_row:
@@ -521,15 +572,12 @@ if __name__ == '__main__':
 
                     if markerDistance < 0.42:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 24
-
+                        state = 17
                 else:
-                    state = 21
-
-
-            elif state == 21:
-                # Overshoot correction
-                target_heading = aisleIMU - np.pi/2
+                    state = 13
+                    
+            elif state == 17:
+                target_heading = aisleIMU + math.pi/2
                 current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
@@ -543,56 +591,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
-            elif state == 22:
-                target_distance = 0.8
-                error = distance - target_distance
-                
-                # proportional control
-                kp = 0.5   # <-- tune this value
-                v = kp * error
-                
-                # clamp velocity
-                v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
-                
-                bot.SetTargetVelocities(v, 0.0)
-                print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-                
-                # within tolerance
-                if abs(error) <= 0.07:  # 1 cm offset tolerance
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    state = 23
-
-            elif state == 23:
-                target_heading = aisleIMU
-                current_heading = bot.robotPose[5]
-                e_theta = angle_wrap(target_heading - current_heading)
-
-                kp = 0.5
-                rotation_velocity = kp * e_theta
-                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-
-                if abs(e_theta) < np.radians(1):
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    state = 20
-                else:
-                    bot.SetTargetVelocities(0.0, rotation_velocity)
-            
-            elif state == 24:
-                target_heading = aisleIMU + math.pi/2
-                current_heading = bot.robotPose[5]
-                e_theta = angle_wrap(target_heading - current_heading)
-
-                kp = 0.5
-                rotation_velocity = kp * e_theta
-                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-
-                if abs(e_theta) < np.radians(1):
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    state = 25
-                else:
-                    bot.SetTargetVelocities(0.0, rotation_velocity)
-            
-            elif state == 25:
+            elif state == 18:
                 target_distance = 0.06   # 7 cm
                 error = distance - target_distance
 
@@ -602,7 +601,7 @@ if __name__ == '__main__':
                     v = 0.0
                     bot.SetTargetVelocities(0.0, 0.0)
                     print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
-                    state = 26
+                    state = 19
                 else:
                     v = kp * error
                     v = max(min(v, 0.05), -0.05)  # clamp both directions
@@ -611,21 +610,21 @@ if __name__ == '__main__':
 
 
 
-            elif state == 26:
+            elif state == 19:
                 bot.SetTargetVelocities(0.0, 0.0)
                 bot.DropItem()
                 bot.DropItemInClosestShelfBay()
                 print("Item dropped successfully.")
                 backTime = time.time()
-                state = 27
+                state = 20
 
-            elif state == 27:
+            elif state == 20:
                 if (time.time() - backTime >= 0.2):
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 28
+                    state = 21
                 bot.SetTargetVelocities(-0.1, 0.0)
 
-            elif state == 28:
+            elif state == 21:
                 target_heading = aisleIMU + math.pi
                 current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
@@ -636,11 +635,11 @@ if __name__ == '__main__':
 
                 if abs(e_theta) < np.radians(1):
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 29
+                    state = 22
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
                 
-            elif state == 29:
+            elif state == 22:
                 target_distance = 0.45
                 error = distance - target_distance
                 
