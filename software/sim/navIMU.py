@@ -18,12 +18,13 @@ shelf_to_aisle = {
     "5": ["3", -np.pi/2]   # fixed duplicate key
 }
 
-pickingbay_distance_wall = {"1":0.15, "2":0.45, "3":0.75}
+pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.15}
 shelf_distance_marker = {"1":1, "2":1, "3":0.42, "4":2}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
 pickingBay = 1
-shelf = 2.2
+pickingBayArrayIndex = pickingBay - 1
+shelf = 4.3
 
 def getMeasurements(shelf, pickingBay):
     # Split shelf into two parts
@@ -41,7 +42,7 @@ def getMeasurements(shelf, pickingBay):
     # Shelf marker distance (based on the second digit)
     shelfMarkerDistance = shelf_distance_marker[second]
 
-    return pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation
+    return aisle_id, pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation
 
 # ---------------------------
 # Potential fields
@@ -131,7 +132,7 @@ robotParameters.sync = False
 # ---------------------------
 if __name__ == '__main__':
     try:
-        pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation = getMeasurements(shelf, pickingBay)
+        aisle_id, pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation = getMeasurements(shelf, pickingBay)
         state = -1
         print("Press Ctrl+C to stop the simulation\n")
         print("Connecting to CoppeliaSim...")
@@ -163,11 +164,9 @@ if __name__ == '__main__':
                 warehouseObjects.PickingStationMarkers
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
-            # print(math.degrees(bot.robotPose[5]))
-            # ------------------ STATE 0: Find / center on Picking Station 1 ------------------
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
 
-            # ------------------ STATE -1: Search for shelf ------------------------------
+            # ------------------ STATE -1: Turn until shelf is not seen ------------------------------
             if state == -1:
                 if shelfRB and any(row is not None for row in shelfRB):
                     print("CAN SEE SHELF")
@@ -176,7 +175,7 @@ if __name__ == '__main__':
                     state = -1.5
                     print("NO SHELF SPOTTED")
 
-            # ------------------ STATE -1.5: Identify closest shelf ------------------------------
+            # ------------------ STATE -1.5: Turn left until shelf is seen ------------------------------
             elif state == -1.5:
                 if shelfRB and any(row is not None for row in shelfRB):
                     for i, row in enumerate(shelfRB):
@@ -213,6 +212,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 0
 
+            # ------------------ STATE 0: Turn to Picking Station 1 Marker ------------------------------
             elif state == 0:
                 has_ps1 = (pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0)
                 if has_ps1:
@@ -352,9 +352,9 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
 
-            # ------------------ STATE 6: Drive to wall ------------------------------
+            # ------------------ STATE 6: Drive to wall until certain distance ------------------------------
             elif state == 6:
-                target_distance = 0.45
+                target_distance = pickingBayWallDistance 
                 error = distance - target_distance
 
                 # proportional control
@@ -376,15 +376,15 @@ if __name__ == '__main__':
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
             elif state == 7:
                 # bot.GetCameraImage()
-                has_pickingbay = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
+                has_pickingbay = (pickingStationRB and pickingStationRB[pickingBayArrayIndex] is not None and len(pickingStationRB[pickingBayArrayIndex]) > 0)
                 if has_pickingbay:
-                    pickingBayBearing = math.degrees(pickingStationRB[1][1])
+                    pickingBayBearing = math.degrees(pickingStationRB[pickingBayArrayIndex][1])
                     kp = 0.01
                     rotation_velocity = kp * pickingBayBearing 
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(pickingBayBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        pickingBayDistance = pickingStationRB[1][0]
+                        pickingBayDistance = pickingStationRB[pickingBayArrayIndex][0]
                         state = 8
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
@@ -393,14 +393,14 @@ if __name__ == '__main__':
 
             # ------------------ STATE 8: Drive to Picking Bay with fields ------------------------------
             elif state == 8:
-                has_row2 = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
+                has_row2 = (pickingStationRB and pickingStationRB[pickingBayArrayIndex] is not None and len(pickingStationRB[pickingBayArrayIndex]) > 0)
                 if has_row2:
                     all_obstacles = []
                     for group in (obstaclesRB, shelfRB):
                         if group:
                             all_obstacles.extend(group)   # merge lists
                     U_rep = repulsiveField(all_obstacles, phi)
-                    U_att = attractiveField(pickingStationRB[1], phi)
+                    U_att = attractiveField(pickingStationRB[pickingBayArrayIndex], phi)
                     best_bearing = bestBearing(U_att, U_rep, phi)
 
                     if best_bearing is not None:
@@ -417,12 +417,13 @@ if __name__ == '__main__':
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
 
-                    if pickingStationRB[1][0] < 0.185:
+                    if pickingStationRB[pickingBayArrayIndex][0] < 0.185:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 9
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
 
+            # ------------------ STATE 9: Collect item ------------------------------
             elif state == 9:
                 success, station = bot.CollectItem(closest_picking_station=True)
                 if success:
@@ -430,7 +431,7 @@ if __name__ == '__main__':
                 else:
                     state = 100            
 
-
+            # ------------------ STATE 10: Turn until Row Marker seen ------------------------------
             elif state == 10:
                 if rowMarkerRB:
                     for i, row in enumerate(rowMarkerRB):
@@ -443,6 +444,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
                                          
+            # ------------------ STATE 11: Turn to Row Marker ------------------------------
             elif state == 11:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
                 if has_row:
@@ -458,6 +460,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
 
+            # ------------------ STATE 12: Drive toward Row Marker with fields ------------------------------
             elif state == 12:
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
                 if has_row:
@@ -492,8 +495,9 @@ if __name__ == '__main__':
                     # Lost the picking station -> search
                     bot.SetTargetVelocities(0.0, 0.2)
 
+            # ------------------ STATE 13: Turn to face wall to drive to aisle entranse ------------------------------
             elif state == 13:
-                target_heading = aisleIMU  - np.pi/2# radians
+                target_heading = aisleIMU + aisleOrientation # radians
                 current_heading = bot.robotPose[5]  # radians
 
                 e_theta = angle_wrap(target_heading - current_heading)
@@ -508,8 +512,9 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
+            # ------------------ STATE 14: Drive to wall until certain distance (front of desired aisle) ------------------------------
             elif state == 14:
-                target_distance = 0.8
+                target_distance = aisleWallDistance
                 error = distance - target_distance
                 
                 # proportional control
@@ -527,6 +532,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 15
 
+            # ------------------ STATE 15: Turn to face aisle marker ------------------------------
             elif state == 15:
                 target_heading = aisleIMU
                 current_heading = bot.robotPose[5]
@@ -542,18 +548,19 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
+            # ------------------ STATE 16: Drive toward Row Marker with fields ------------------------------
             elif state == 16:
-                has_row = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
-
+                aisleIndex = int(aisle_id) - 1
+                has_row = (rowMarkerRB and rowMarkerRB[aisleIndex] is not None and len(rowMarkerRB[aisleIndex]) > 0)
                 if has_row:
-                    markerDistance = rowMarkerRB[1][0]
+                    markerDistance = rowMarkerRB[aisleIndex][0]
                     # --- Potential fields toward row marker ---
                     all_obstacles = []
                     for group in (obstaclesRB, shelfRB):
                         if group:
                             all_obstacles.extend(group)
                     U_rep = repulsiveField(all_obstacles, phi)
-                    U_att = attractiveField(rowMarkerRB[1], phi)
+                    U_att = attractiveField(rowMarkerRB[aisleIndex], phi)
                     best_bearing = bestBearing(U_att, U_rep, phi)
 
                     if best_bearing is not None:
@@ -570,14 +577,15 @@ if __name__ == '__main__':
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
 
-                    if markerDistance < 0.42:
+                    if markerDistance < shelfMarkerDistance:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 17
                 else:
                     state = 13
-                    
+            
+            # ------------------ STATE 17: Turn to face shelf bay to drop item ------------------------------
             elif state == 17:
-                target_heading = aisleIMU + math.pi/2
+                target_heading = aisleIMU + shelfOrientation
                 current_heading = bot.robotPose[5]
                 e_theta = angle_wrap(target_heading - current_heading)
 
@@ -591,6 +599,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
+            # ------------------ STATE 18: Drive to shelf bay to drop item ------------------------------
             elif state == 18:
                 target_distance = 0.06   # 7 cm
                 error = distance - target_distance
@@ -608,8 +617,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(v, 0.0)
                     print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-
-
+            # ------------------ STATE 19: Drop item ------------------------------
             elif state == 19:
                 bot.SetTargetVelocities(0.0, 0.0)
                 bot.DropItem()
@@ -618,12 +626,14 @@ if __name__ == '__main__':
                 backTime = time.time()
                 state = 20
 
+            # ------------------ STATE 20: Reverse a bit ------------------------------
             elif state == 20:
                 if (time.time() - backTime >= 0.2):
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 21
                 bot.SetTargetVelocities(-0.1, 0.0)
 
+            # ------------------ STATE 21: Turn to face away from aisle marker ------------------------------
             elif state == 21:
                 target_heading = aisleIMU + math.pi
                 current_heading = bot.robotPose[5]
@@ -638,7 +648,9 @@ if __name__ == '__main__':
                     state = 22
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
-                
+
+
+            # ------------------ STATE 22: Drive to wall until certain distance (return to return zone) ------------------------------                 
             elif state == 22:
                 target_distance = 0.45
                 error = distance - target_distance
@@ -656,7 +668,29 @@ if __name__ == '__main__':
                 # within tolerance
                 if abs(error) <= 0.1:  # 1 cm offset tolerance
                     bot.SetTargetVelocities(0.0, 0.0)
-                    state = 100
+                    print("Successful delivery!")
+                    state = 23
+
+            elif state == 23:
+                target_heading = aisleIMU + math.pi/2
+                current_heading = bot.robotPose[5]
+                e_theta = angle_wrap(target_heading - current_heading)
+
+                kp = 0.5
+                rotation_velocity = kp * e_theta
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+                if abs(e_theta) < np.radians(1):
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 24
+                else:
+                    bot.SetTargetVelocities(0.0, rotation_velocity)
+
+            elif state == 24:
+                #Something to do with shifting array so next delivery is executed
+                state = 100
+                
+                
 
 
 
