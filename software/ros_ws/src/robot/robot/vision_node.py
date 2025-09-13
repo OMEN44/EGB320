@@ -15,7 +15,14 @@ class Vision(Node):
         super().__init__('vision_node')
         self.get_logger().info('Vision node has been started.')
 
+        self.pipeline = ["pickingStation", "isleMarkers", "colourMask"]
+
         self.publisher = self.create_publisher(String, 'poi', 10)
+        self.subscription = self.create_subscription(
+            String,
+            'pipelineFilters',
+            self.updatePipeline,
+            10)
 
         video = True
 
@@ -29,6 +36,10 @@ class Vision(Node):
             # sleep(3)
             # i.useImage(self, '1mc')
             # sleep(3)
+
+    def updatePipeline(self, msg):
+        self.pipeline = msg.data.split(',')
+        self.get_logger().info(f'Pipeline updated: {self.pipeline}')
 
 
 def main():

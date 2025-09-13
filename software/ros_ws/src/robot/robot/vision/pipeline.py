@@ -1,20 +1,27 @@
 import cv2
 import numpy as np
 
-
+from std_msgs.msg import String
 
 from robot.vision.isle_marker import findIsleMarkers, findPickingStation
 from robot.vision.colour_mask import proccess as mask
 
 def proccess(self, frame):
 
-    # Gaussian blur everything before proccessing to reduce noise
-    # cv2.GaussianBlur(frame, (5, 5), 0, frame)
+    data = []
+    outputFrame = frame.copy()
+    outputFrame2 = frame.copy()
 
-    img1 = findIsleMarkers(self, frame)
+    for filter in self.pipeline:
+        if filter == "isleMarkers":
+            [outputFrame, isleMarkers] = findIsleMarkers(frame, outputFrame)
+            data += isleMarkers
+        elif filter == "pickingStation":
+            [outputFrame, pickingStations] = findPickingStation(frame, outputFrame)
+            data += pickingStations
+        elif filter == "colourMask":
+            outputFrame2 = mask(frame, np.array([0,0,0]), np.array([255, 255, 50]))
 
-    img1 = findPickingStation(self, img1)
+    self.publisher.publish(String(data=', '.join(data)))
 
-    img2 = mask(frame, np.array([0,0,0]), np.array([255, 255, 35]), 9, True)
-
-    return [img1, img2, frame]
+    return [outputFrame, outputFrame2, frame]
