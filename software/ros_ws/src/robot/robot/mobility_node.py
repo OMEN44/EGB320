@@ -4,23 +4,25 @@ from rclpy.node import Node
 import gpiozero
 import time
 
+from std_msgs.msg import String
+
 class Mobility(Node):
     def __init__(self):
         super().__init__('mobility_node')
         self.get_logger().info('Mobility node has been started.')
         # Create 100ms timer
-        timer_period = 0.1  # seconds
+
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
 
     def timer_callback(self):
-        led = gpiozero.LED(14)
-        # while True: 
-        led.on()
-        self.get_logger().info("LED ON")
-        time.sleep(1)
-        led.off()
-        self.get_logger().info("LED OFF")
-        time.sleep(1)
+        msg = String()
+        msg.data = 'Hello World: %d' % self.i
+        self.publisher_.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg.data)
+        self.i += 1
 
 def main():
     rclpy.init()
