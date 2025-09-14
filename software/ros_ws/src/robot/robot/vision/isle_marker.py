@@ -2,37 +2,52 @@ import cv2
 import numpy as np
 from std_msgs.msg import String
 
+from robot.vision.utils import objectDistance, objectAngle
+
 import json
 import random
 
 isleMarkerCount = []
 
-# Calculated using (isle marker width in px * distance to isle marker in cm) / real isle marker width in cm
-FOCAL_LENGTH = (32 * 100) / 7
-
-def findIsleMarkers(frame, outputFrame):
+def findIsleMarkers(self, frame, outputFrame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # make a mask for the color black
     lower_black = np.array([0, 0, 0])
-    upper_black = np.array([255, 255, 50])
+    upper_black = np.array([179, 140, 120])
 
     mask = cv2.inRange(hsv, lower_black, upper_black)
-    openingValue = 10
-    cv2.erode(mask, np.ones((openingValue, openingValue)))  # Erode to remove noise
-    cv2.dilate(mask, np.ones((openingValue, openingValue)))  # Dilate to restore size
 
     contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
 
+    # 0: (x,y) position
+    # 1: number of markers
+    # 2: average width
+    clusterCenter = [[0,0], 0, 0]
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 20 and area < 500:
+        if area > 200 and area <  2000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
-            if cv2.isContourConvex(approx) and len(approx) >= 8:
-                outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 255), 2)
+            # outputFrame = cv2.drawContours(outputFrame, [approx], -1, (0, 0, 255), 2)
+            if cv2.isContourConvex(approx):
                 
-                rect = cv2.boundingRect(approx)
-                # cv2.rectangle(outputFrame, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (0, 255, 0), 2)
+                x, y, w, h = cv2.boundingRect(approx)
+                # outputFrame = cv2.circle(outputFrame, (int(x + w / 2), int(y + h / 2)), 5, (0, 255, 0), -1)
+                clusterCenter[0][0] += (x + w / 2)
+                clusterCenter[0][1] += (y + h / 2)
+                clusterCenter[1] += 1
+                clusterCenter[2] += w
+                
+    if (clusterCenter[1] > 0):
+        clusterCenter[0][0] = clusterCenter[0][0] / clusterCenter[1]
+        clusterCenter[0][1] = clusterCenter[0][1] / clusterCenter[1]
+        clusterCenter[2] = clusterCenter[2] / clusterCenter[1]
+        outputFrame = cv2.circle(outputFrame, (int(clusterCenter[0][0]), int(clusterCenter[0][1])), 5, (0, 0, 255), -1)
+        outputFrame = cv2.putText(outputFrame, f'{clusterCenter[1]}', (int(clusterCenter[0][0]) - 5, int(clusterCenter[0][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+        distance = objectDistance(7, clusterCenter[2])
+        return [outputFrame, [f'I{clusterCenter[1]}: {distance}cm @ {objectAngle(clusterCenter[0][0])}°']]
     return [outputFrame, []]
     # hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -132,7 +147,7 @@ def findPickingStation(frame, outputFrame):
         cv2.circle(outputFrame, (int(cluster[0][0]), int(cluster[0][1])), 5, (0, 0, 255), -1)
         cv2.putText(outputFrame, f'{cluster[1]}', (int(cluster[0][0]) - 5, int(cluster[0][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        distance = ((FOCAL_LENGTH * 5) / (cluster[2])) if cluster[2] != 0 else -1
-        message.append(f'{cluster[1]}: {np.round(distance, 2)};')
+        distance = objectDistance(7, cluster[2])
+        message.append(f'P{cluster[1]}: {distance}cm @ {objectAngle(cluster[0][0])}°')
 
     return [outputFrame, message]
