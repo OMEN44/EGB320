@@ -18,6 +18,8 @@ def useVideo(self):
     # cap = setupCameraWithDefaults(auto_exposure=False, exposure=10, auto_wb=False)
     cap = setupCameraWithDefaults()
 
+    count = 0
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -26,7 +28,32 @@ def useVideo(self):
 
         now = time.time()
 
-        frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/picking1.jpg')
+        interval = 50
+
+        if count < interval * 1:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/1m.jpg')
+        elif count < interval * 2:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/1mb.jpg')
+        elif count < interval * 3:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/1mc.jpg')
+        elif count < interval * 4:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/0.8m.jpg')
+        elif count < interval * 5:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/isle1.jpg')
+        elif count < interval * 6:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/isle2.jpg')
+        elif count < interval * 7:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/isle3.jpg')
+        elif count < interval * 8:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/picking1.jpg')
+        elif count < interval * 9:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/picking2.jpg')
+        elif count < interval * 10:
+            frame = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/picking3.jpg')
+        elif count < interval * 11:
+            count = 0
+
+        count += 1
 
         frames = proccess(self, frame)
 
