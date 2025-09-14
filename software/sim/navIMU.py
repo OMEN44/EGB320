@@ -24,9 +24,10 @@ aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi
 
 pickingBay = 1
 pickingBayArrayIndex = pickingBay - 1
-shelf = 4.3
+shelf = 1.3
 
 def getMeasurements(shelf, pickingBay):
+    
     # Split shelf into two parts
     first, second = str(shelf).split(".")
 
@@ -652,7 +653,10 @@ if __name__ == '__main__':
 
             # ------------------ STATE 22: Drive to wall until certain distance (return to return zone) ------------------------------                 
             elif state == 22:
-                target_distance = 0.45
+                if aisle_id == "1":
+                    target_distance = 0.2
+                else:
+                    target_distance = 0.45
                 error = distance - target_distance
                 
                 # proportional control
