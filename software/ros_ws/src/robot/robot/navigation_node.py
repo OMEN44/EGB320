@@ -9,9 +9,12 @@ class Navigation(Node):
     def __init__(self):
         super().__init__('navigation_node')
         self.get_logger().info('Navigation node has been started.')
+        # For sending pipeline filter data
         self.pipeline = self.create_publisher(String, '/pipeline_filters', 10)
+        # For sending target item data
+        self.targetItem = self.create_publisher(String, '/target_item', 10)
 
-        # Pipeline options:
+        # Pipeline Options:
         # isleMarkers
         # pickingStation
         # colourMask
@@ -19,6 +22,14 @@ class Navigation(Node):
         # obstacles
         # shelves
         self.pipeline.publish(String(data='pickingStation,isleMarkers,colourMask'))
+        # Item Options:
+        # Bowl
+        # Coffee Cup
+        # Robot Oil Bottle
+        # Rubiks Cube
+        # Soccer Ball
+        # Wheet Bots
+        self.targetItem.publish(String(data='Soccer Ball,3')) # item name,isle number
 
 
 
