@@ -25,7 +25,7 @@ class Vision(Node):
         # items
         # obstacles
         # shelves
-        self.pipeline = ["", "isleMarkers", "items", "colourMask"]
+        self.pipeline = ["pickingStation", "isleMarkers", "items", "colourMask", "shelves", "obstacles"]
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)

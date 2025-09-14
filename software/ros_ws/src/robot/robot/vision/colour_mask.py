@@ -2,10 +2,8 @@ import cv2
 import numpy as np
 
 
-def proccess(self, frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-    mask = cv2.inRange(hsv, self.colourMask[0], self.colourMask[1])
+def proccess(self, hsvframe, outputFrame):
+    mask = cv2.inRange(hsvframe, self.colourMask[0], self.colourMask[1])
 
     contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
     filteredContours = []
@@ -15,7 +13,6 @@ def proccess(self, frame):
         if area > self.areaLimit[0] and area < self.areaLimit[1]:
             filteredContours.append(cnt)
 
-    outputFrame = frame.copy()
     outputFrame = cv2.drawContours(outputFrame, filteredContours, -1, (0, 255, 0), -1)
 
     return outputFrame
