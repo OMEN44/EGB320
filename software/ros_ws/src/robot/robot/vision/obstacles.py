@@ -29,11 +29,11 @@ def findObstacles(self, hsvFrame, outputFrame):
 
                 outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
                 if (w > h):
-                    distance = objectDistance(5, w)
-                    person = True
+                    distance = objectDistance(12, w)
                     outputFrame = cv2.putText(outputFrame, f'R', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 else:
-                    distance = objectDistance(12, w)
+                    person = True
+                    distance = objectDistance(5, w)
                     outputFrame = cv2.putText(outputFrame, f'P', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
                 data.append(f'{ "P" if person else "R"}: {distance}cm @ {angle}°')

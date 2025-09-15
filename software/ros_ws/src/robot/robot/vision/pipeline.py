@@ -32,7 +32,7 @@ def proccess(self, frame):
             [outputFrame, obstacles] = findObstacles(self, hsvframe, outputFrame)
             data += obstacles
         elif filter == "shelves":
-            [outputFrame3, shelves] = findShelves(self, hsvframe, outputFrame3)
+            [outputFrame, shelves] = findShelves(self, hsvframe, outputFrame)
             data += shelves
         
         elif filter == "colourMask":
