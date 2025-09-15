@@ -154,7 +154,6 @@ if __name__ == '__main__':
         phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
 
         while True:
-            print(state)
             bot.UpdateObjectPositions()
 
             # Order here must match what GetDetectedObjects returns
@@ -354,6 +353,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
             
+            # ------------------ STATE 5.5: Get next delivery instructions ------------------------------
             elif state == 5.5:
                 pickingBayArrayIndex, aisle_id, pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation = getMeasurements(deliveries, deliveryNo)
                 state = 6
@@ -665,6 +665,7 @@ if __name__ == '__main__':
                 else:
                     state = 23
 
+            # ------------------ STATE 221: Turn to face picking station (if aisle 1 delivery) ------------------------------
             elif state == 221:
                 # bot.GetCameraImage()
                 has_row2 = (pickingStationRB and pickingStationRB[2] is not None and len(pickingStationRB[2]) > 0)
@@ -675,13 +676,13 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(stationBearing) < 1:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        print("hello")
                         state = 222
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
 
+            # ------------------ STATE 222: Drive toward Picking Station with fields ------------------------------
             elif state == 222:
                 has_ps1 = (pickingStationRB and pickingStationRB[2] is not None and len(pickingStationRB[2]) > 0)
                 if has_ps1:
@@ -718,6 +719,7 @@ if __name__ == '__main__':
                     # Lost the picking station -> search
                     bot.SetTargetVelocities(0.0, 0.2)
 
+            # ------------------ STATE 23: Drive back to return zone ------------------------------
             elif state == 23:
                 target_distance = 0.45
                 error = distance - target_distance
@@ -738,6 +740,7 @@ if __name__ == '__main__':
                     print("Successful delivery!")
                     state = 24
 
+            # ------------------ STATE 24: Turn to face aisle ------------------------------
             elif state == 24:
                 target_heading = aisleIMU + math.pi/2
                 current_heading = bot.robotPose[5]
@@ -756,6 +759,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
+            # ------------------ STATE 123: Turn to wall (to drive to front of aisle 2 for reset)  ------------------------------
             elif state == 123:
                 target_heading = aisleIMU - math.pi/2
                 current_heading = bot.robotPose[5]
@@ -771,6 +775,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
 
+            # ------------------ STATE 124: Drive to front of aisle 2 for reset ------------------------------
             elif state == 124:
                 target_distance = aisle_distance_wall["2"][0]   
                 error = distance - target_distance
@@ -788,7 +793,7 @@ if __name__ == '__main__':
                     bot.SetTargetVelocities(v, 0.0)
                     print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-
+            # ------------------ STATE 25: Get next delivery instructions or end ------------------------------
             elif state == 25:
                 if deliveryNo < len(deliveries) - 1:
                     deliveryNo += 1
