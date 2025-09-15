@@ -118,7 +118,7 @@ while True:
     sleep(2)
     
     servo1.angle = -30
-    servo2.angle = 10
+    servo2.angle = 15
     sleep(2)
 
     servo1.angle = 0
