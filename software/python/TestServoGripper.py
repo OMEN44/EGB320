@@ -56,5 +56,5 @@ servo = Servo(
 
 print("Rotating CW...")
 servo.value = -0.1
-sleep(0.9) # Rotate for 3 seconds
+sleep(0.9) # time
 
