@@ -33,10 +33,19 @@ class Navigation(Node):
         self.target_item_pub = self.create_publisher(String, '/target_item', 10)
         self.velocities_pub = self.create_publisher(Twist, '/mobility_twist', 10)
 
+        # Subscribers
+        self.point_of_interest_sub = self.create_subscription(String, "/poi", self.poi_callback, 10)
+
         # State machine variables
         self.state = 'START'
         self.current_heading = 0.0
         self.target_heading = 0.0
+
+        self.timer_ = self.create_timer(0.001, self.state_machine)
+
+        self.objects = []
+        self.aisle_markers = []
+        self.shelves = []
 
     # ---------------------------
     # Potential fields
@@ -106,6 +115,23 @@ class Navigation(Node):
         # Placeholder: implement gripper or collection action
         self.get_logger().info("Dropping item at shelf...")
 
+    # --------------------------- Point of Interest callback ---------------------------
+    def poi_callback(self, msg):
+        self.pois = {}
+        for item in msg.data:
+            t = item["type"]
+            if t not in self.pois:
+                self.pois[t] = []
+            self.pois[t].append((item["distance"], item["bearing"]))
+
+    def filter_poi(self, poi_type):
+        distance_bearing_list = []
+        for d in self.poi:
+            if d["type"] == poi_type:
+                distance_bearing_list.append({"distance": d["distance"], "bearing": d["bearing"]})
+        return distance_bearing_list
+    
+
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
         if self.state == 'START':
@@ -114,7 +140,15 @@ class Navigation(Node):
             self.state = 'DRIVE_INTO_AISLE'
 
         elif self.state == 'DRIVE_INTO_AISLE':
-            self.send_vision_data("isleMarkers, obstacles, shelves", "Bowl, 1")
+            self.send_vision_data("isleMarkers,obstacles,shelves", "")
+            self.objects = self.filter_poi("obstacle")
+            self.aisle_markers = self.filter_poi("isleMarker")
+            self.shelves = self.filter_poi("shelf")
+
+
+
+            
+            
             distance_to_aisle = self.get_distance_to_marker()  # Placeholder function
             error = distance_to_aisle - self.shelfMarkerDistance
 
