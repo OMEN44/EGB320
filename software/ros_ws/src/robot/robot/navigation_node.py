@@ -47,6 +47,8 @@ class Navigation(Node):
         self.aisle_markers = []
         self.shelves = []
 
+        self.phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
+
     # ---------------------------
     # Potential fields
     # ---------------------------
@@ -122,16 +124,15 @@ class Navigation(Node):
             t = item["type"]
             if t not in self.pois:
                 self.pois[t] = []
-            self.pois[t].append((item["distance"], item["bearing"]))
+            self.pois[t].append((item["data"], item["distance"], item["bearing"]))
 
     def filter_poi(self, poi_type):
         distance_bearing_list = []
         for d in self.poi:
             if d["type"] == poi_type:
-                distance_bearing_list.append({"distance": d["distance"], "bearing": d["bearing"]})
+                distance_bearing_list.append({"data": d["data"], "distance": d["distance"], "bearing": d["bearing"]})
         return distance_bearing_list
     
-
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
         if self.state == 'START':
@@ -144,37 +145,39 @@ class Navigation(Node):
             self.objects = self.filter_poi("obstacle")
             self.aisle_markers = self.filter_poi("isleMarker")
             self.shelves = self.filter_poi("shelf")
-
-
-
-            
-            
-            distance_to_aisle = self.get_distance_to_marker()  # Placeholder function
-            error = distance_to_aisle - self.shelfMarkerDistance
-
+            distance_to_marker = self.aisle_markers[self.aisle_index+1]["distance"]
+            marker_bearing = self.aisle_markers[self.aisle_index+1]["bearing"][1] 
+            all_obstacles = []
+            for group in (self.objects, self.shelves):
+                all_obstacles.extend([(obj["distance"], obj["bearing"]) for obj in group])
+            error = distance_to_marker - self.shelfMarkerDistance
+            U_rep = self.repulsiveField(all_obstacles, self.phi)
+            U_att = self.attractiveField((distance_to_marker, marker_bearing), self.phi)
+            best_bearing = self.bestBearing(U_att, U_rep, self.phi)
+            if best_bearing is not None:
+                theta = 0.0  # if you have a robot heading API, replace this with it
+                e_theta = self.angle_wrap(best_bearing - theta)
+                k_omega = 0.3
+                v_max = 0.1
+                sigma = np.radians(30)
+                omega = k_omega * e_theta
+                v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                self.publish_velocity(v, omega)
+            else:
+                # No valid direction -> gentle spin to search
+                self.publish_velocity(0.0, 0.15)
             if abs(error) < 0.01:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'TURN_TO_SHELF'
                 self.get_logger().info("Turning to shelf...")
-            else:
-                v = 0.05
-                self.publish_velocity(v, 0.0)
 
         elif self.state == 'TURN_TO_SHELF':
-            e_theta = self.target_heading - self.current_heading
-            e_theta = (e_theta + math.pi) % (2 * math.pi) - math.pi
-
-            if abs(e_theta) < math.radians(1):
-                self.publish_velocity(0.0, 0.0)
-                self.state = 'DRIVE_TO_SHELF'
-                self.get_logger().info("Facing shelf, dropping item...")
-            else:
-                kp = 0.3
-                omega = max(min(kp * e_theta, 0.3), -0.3)
-                self.publish_velocity(0.0, omega)
+            left_most_shelf = self.shelves["0"]["bearing"][0]
+            right_most_shelf = self.shelves["0"]["bearing"][2]
+            state = 'DRIVE_TO_SHELF' 
 
         elif self.state == 'DRIVE_TO_SHELF':
-            distance_to_shelf = self.get_distance_to_marker()  # Placeholder function
+            distance_to_shelf = self.get_ultrasonic_distance()  # Placeholder function
             target_distance = 0.02
             error = distance_to_shelf - target_distance
 
