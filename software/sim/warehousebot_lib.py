@@ -1097,6 +1097,17 @@ class COPPELIA_WarehouseRobot(object):
 					except Exception as e:
 						print(f"Warning: Error setting default obstacle {index} position: {e}")
 		
+		# Set robot position
+		print('Setting robot position...')
+		coppeliaStartingPosition = [self.sceneParameters.robotStartingPosition[0], self.sceneParameters.robotStartingPosition[1], 0.2]
+		coppeliaStartingPosition = [self.sceneParameters.robotStartingPosition[0], self.sceneParameters.robotStartingPosition[1], 0.2]
+		try:
+			print(f'Setting robot position to {coppeliaStartingPosition}')
+			self.sim.setObjectPosition(self.robotHandle, -1, coppeliaStartingPosition)
+			self.sim.setObjectOrientation(self.robotHandle, -1, [0, 0, self.sceneParameters.robotStartingPosition[2]])
+		except Exception as e:
+			print(f"Warning: Error setting robot position: {e}")
+		
 		# Set picking station contents
 		print('Setting picking station contents...')
 		self.SetPickingStationContents()
