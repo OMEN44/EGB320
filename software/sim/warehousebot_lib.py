@@ -1098,6 +1098,7 @@ class COPPELIA_WarehouseRobot(object):
 						print(f"Warning: Error setting default obstacle {index} position: {e}")
 		
 		# Set robot position
+		# Set robot position
 		print('Setting robot position...')
 		coppeliaStartingPosition = [self.sceneParameters.robotStartingPosition[0], self.sceneParameters.robotStartingPosition[1], 0.2]
 		coppeliaStartingPosition = [self.sceneParameters.robotStartingPosition[0], self.sceneParameters.robotStartingPosition[1], 0.2]

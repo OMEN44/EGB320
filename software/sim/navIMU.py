@@ -5,6 +5,8 @@ import os, math
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import random
+
 
 obstacle_width = 0.5  # m
 max_range = 2.5      # m
@@ -113,6 +115,11 @@ sceneParameters.obstacle0_StartingPosition = -1
 sceneParameters.obstacle1_StartingPosition = -1
 sceneParameters.obstacle2_StartingPosition = -1
 
+robot_starting_x = random.uniform(-0.8, -0.3)  # Random float between 1.5 and 4.2
+robot_starting_y = random.uniform(-0.85, -0.1)  # Random float between 1.5 and 4.2
+robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
+sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
+
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
 robotParameters.minimumLinearSpeed = 0.0
@@ -129,6 +136,7 @@ robotParameters.maxRowMarkerDetectionDistance = 2.5
 robotParameters.collectorQuality = 1
 robotParameters.maxCollectDistance = 0.15
 robotParameters.sync = False
+
 
 # ---------------------------
 # Main
@@ -170,12 +178,25 @@ if __name__ == '__main__':
 
             # ------------------ STATE -1: Turn until shelf is not seen ------------------------------
             if state == -1:
-                if shelfRB and any(row is not None for row in shelfRB):
-                    # print("CAN SEE SHELF")
+                sees_shelf = shelfRB and any(row is not None for row in shelfRB)
+                sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
+
+                if sees_picking_bay:
+                    state = 0  # Go straight to picking station state
+                    bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
+                    # print("Picking bay spotted, skipping to state 0")
+
+                elif sees_shelf:
+                    # Keep turning while shelf is visible
                     bot.SetTargetVelocities(0.0, -0.2)
+                    # print("Turning... still see shelf")
+
                 else:
+                    # No shelf, no picking bay → fallback
                     state = -1.5
-                    # print("NO SHELF SPOTTED")
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    # print("No shelf spotted, moving to -1.5")
+
 
             # ------------------ STATE -1.5: Turn left until shelf is seen ------------------------------
             elif state == -1.5:
