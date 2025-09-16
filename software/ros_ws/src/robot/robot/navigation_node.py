@@ -2,6 +2,10 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Int32 # Import the Int32 message type
+from std_msgs.msg import Bool
+
+
 import numpy as np
 import math
 
@@ -32,9 +36,11 @@ class Navigation(Node):
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
         self.target_item_pub = self.create_publisher(String, '/target_item', 10)
         self.velocities_pub = self.create_publisher(Twist, '/mobility_twist', 10)
+        self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
         self.point_of_interest_sub = self.create_subscription(String, "/poi", self.poi_callback, 10)
+        self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
         # State machine variables
         self.state = 'START'
@@ -49,10 +55,12 @@ class Navigation(Node):
 
         self.phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
 
+        self.arm_status = False  
+
     # ---------------------------
     # Potential fields
     # ---------------------------
-    def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
+    def repulsiveField(self, obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         U_rep = np.zeros_like(phi)
         if not obstacleList:
             return U_rep
@@ -69,7 +77,7 @@ class Navigation(Node):
             U_rep[mask] = np.maximum(U_rep[mask], (1.0 / obs_distance))
         return U_rep
 
-    def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
+    def attractiveField(self,target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
         if target is None:
             return np.zeros_like(phi)
         target_distance, target_bearing = target
@@ -77,7 +85,7 @@ class Navigation(Node):
         U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
         return U_att
 
-    def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
+    def bestBearing(self, U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
         # Sensor-view slide uses subtraction (Goal - Obstacles)
         U_total = U_att - U_rep
         if not np.isfinite(U_total).all():
@@ -87,9 +95,13 @@ class Navigation(Node):
         best_index = np.argmax(U_total)
         return phi[best_index]   # radians
 
+    def angle_wrap(self, angle):
+        """Wrap angle to [-pi, pi]."""
+        return (angle + np.pi) % (2*np.pi) - np.pi
+
     # --------------------------- Get distance measurements ---------------------------
     def get_measurements(self, shelfID):
-        """Return aisle index, shelf marker distance, and orientation."""
+        # Return aisle index, shelf marker distance, and orientation.
         first, second = str(shelfID).split(".")
         aisle_id, shelfOrientation = shelf_to_aisle[first]
         aisle_index = int(aisle_id) - 1
@@ -105,6 +117,7 @@ class Navigation(Node):
         target_item_msg = String()
         target_item_msg.data = target_item_data
         self.target_item_pub.publish(target_item_msg)
+        self.get_logger().info("Sent pipeline and target item data to vision...")
 
     # --------------------------- Robot movement and actions publisher ---------------------------
     def publish_velocity(self, forward_vel, angular_vel):
@@ -112,10 +125,14 @@ class Navigation(Node):
         twist_msg.linear.x = forward_vel
         twist_msg.angular.z = angular_vel
         self.velocities_pub.publish(twist_msg)
+        self.get_logger().info("Twist message sent to mobility...")
 
-    def publish_collection(self):
+    def publish_collection(self, collection_command):
         # Placeholder: implement gripper or collection action
-        self.get_logger().info("Dropping item at shelf...")
+        collection_msg = Int32()
+        collection_msg.data = collection_command
+        self.collection_pub.publish(collection_msg)
+        self.get_logger().info("Command sent to collection...")
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
@@ -126,12 +143,11 @@ class Navigation(Node):
                 self.pois[t] = []
             self.pois[t].append((item["data"], item["distance"], item["bearing"]))
 
+    def arm_status_callback(self, msg):
+        self.arm_status = msg.data
+
     def filter_poi(self, poi_type):
-        distance_bearing_list = []
-        for d in self.poi:
-            if d["type"] == poi_type:
-                distance_bearing_list.append({"data": d["data"], "distance": d["distance"], "bearing": d["bearing"]})
-        return distance_bearing_list
+        return self.pois.get(poi_type, [])
     
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
@@ -168,13 +184,49 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.15)
             if abs(error) < 0.01:
                 self.publish_velocity(0.0, 0.0)
+                self.state = 'LIFT_ARM'
+                self.get_logger().info("Lifting Arm...")
+            
+        elif self.state == 'LIFT_ARM':
+            self.publish_collection(3) # Command to lift arm
+            if self.arm_status == True: # Assuming arm_status is updated via a subscriber
+                self.state = False
                 self.state = 'TURN_TO_SHELF'
                 self.get_logger().info("Turning to shelf...")
 
         elif self.state == 'TURN_TO_SHELF':
-            left_most_shelf = self.shelves["0"]["bearing"][0]
-            right_most_shelf = self.shelves["0"]["bearing"][2]
-            state = 'DRIVE_TO_SHELF' 
+            turn_dir = (self.shelf_orientation < 0.0)
+            if turn_dir:
+                omega = 0.3
+            else: 
+                omega = -0.3
+            self.send_vision_data("shelves_bottom", "")
+            self.shelves = self.filter_poi("shelves_bottom")
+            if self.shelves is not None:
+                self.state = 'ALIGN_TO_SHELF'
+            else:
+                self.publish_velocity(0.0, omega)
+
+        elif self.state == 'ALIGN_TO_SHELF':
+            self.send_vision_data("shelves_bottom", "")
+            self.shelves = self.filter_poi("shelves_bottom")
+            if self.shelves:
+                left_most_shelf = self.shelves[0]["bearing"][0]
+                right_most_shelf = self.shelves[0]["bearing"][2]
+                error = left_most_shelf - right_most_shelf
+
+                kp = 0.4
+                omega = max(min(kp*error, 0.3), -0.3)
+
+                if abs(error) < 0.01:
+                    self.publish_velocity(0.0, 0.0)
+                    self.get_logger().info("Aligned with shelf...")
+                    self.state = 'DRIVE_TO_SHELF'
+                else:
+                    self.publish_velocity(0.0, omega)
+            else:
+                self.state = 'DRIVE_INTO_AISLE'
+                 
 
         elif self.state == 'DRIVE_TO_SHELF':
             distance_to_shelf = self.get_ultrasonic_distance()  # Placeholder function
@@ -190,7 +242,7 @@ class Navigation(Node):
                 self.publish_velocity(v, 0.0)
 
         elif self.state == 'DROP_ITEM':
-            self.publish_collection()
+            self.publish_collection(4) # Command to drop item
             self.state = 'DONE'
 
         elif self.state == 'DONE':

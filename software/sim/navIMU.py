@@ -5,6 +5,8 @@ import os, math
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import random
+
 
 obstacle_width = 0.5  # m
 max_range = 2.5      # m
@@ -113,6 +115,12 @@ sceneParameters.obstacle0_StartingPosition = -1
 sceneParameters.obstacle1_StartingPosition = -1
 sceneParameters.obstacle2_StartingPosition = -1
 
+robot_starting_x = random.uniform(-0.8, -0.2)  # Random float between 1.5 and 4.2
+robot_starting_y = random.uniform(-0.85, -0.1)  # Random float between 1.5 and 4.2
+robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
+sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
+# sceneParameters.robotStartingPosition = [-0.5, -0.3, np.pi/2]  # x, y, theta in radians
+
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
 robotParameters.minimumLinearSpeed = 0.0
@@ -129,6 +137,7 @@ robotParameters.maxRowMarkerDetectionDistance = 2.5
 robotParameters.collectorQuality = 1
 robotParameters.maxCollectDistance = 0.15
 robotParameters.sync = False
+
 
 # ---------------------------
 # Main
@@ -152,7 +161,7 @@ if __name__ == '__main__':
         print("Robot is now ready for navigation commands.")
 
         phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
-
+        print("Yellow - Moving to picking station or transporting item to target bay")
         while True:
             bot.UpdateObjectPositions()
 
@@ -170,15 +179,34 @@ if __name__ == '__main__':
 
             # ------------------ STATE -1: Turn until shelf is not seen ------------------------------
             if state == -1:
-                if shelfRB and any(row is not None for row in shelfRB):
-                    # print("CAN SEE SHELF")
+                
+                sees_shelf = shelfRB and any(row is not None for row in shelfRB)
+                sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
+
+                if sees_picking_bay:
+                    state = 0  # Go straight to picking station state
+                    bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
+                    # print("Picking bay spotted, skipping to state 0")
+
+                elif sees_shelf:
+                    # Keep turning while shelf is visible
                     bot.SetTargetVelocities(0.0, -0.2)
+                    # print("Turning... still see shelf")
+
                 else:
+                    # No shelf, no picking bay → fallback
                     state = -1.5
-                    # print("NO SHELF SPOTTED")
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    # print("No shelf spotted, moving to -1.5")
+
 
             # ------------------ STATE -1.5: Turn left until shelf is seen ------------------------------
             elif state == -1.5:
+                sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
+                if sees_picking_bay:
+                    state = 0  # Go straight to picking station state
+                    bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
+                    # print("Picking bay spotted, skipping to state 0")
                 if shelfRB and any(row is not None for row in shelfRB):
                     for i, row in enumerate(shelfRB):
                         if row is not None and len(row) > 0:
@@ -195,6 +223,9 @@ if __name__ == '__main__':
                 has_row = (shelfRB and shelfRB[rowIndex] is not None and len(shelfRB[rowIndex]) > 0)
                 if has_row:
                     rowBearing = math.degrees(shelfRB[rowIndex][1])
+                    rowDistance = shelfRB[rowIndex][0]
+                    if rowDistance < 0.65:
+                        state = 0
                     kp = 0.01
                     rotation_velocity = kp * rowBearing 
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
@@ -426,6 +457,7 @@ if __name__ == '__main__':
 
                     if pickingStationRB[pickingBayArrayIndex][0] < 0.185:
                         bot.SetTargetVelocities(0.0, 0.0)
+                        print("Green - Collecting an item at the picking station")
                         state = 9
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
@@ -434,6 +466,8 @@ if __name__ == '__main__':
             elif state == 9:
                 success, station = bot.CollectItem(closest_picking_station=True)
                 if success:
+                    print("Item collected successfully")
+                    print("Yellow - Moving to picking station or transporting item to target bay")
                     state = 10
                 else:
                     state = 100            
@@ -617,6 +651,7 @@ if __name__ == '__main__':
                     v = 0.0
                     bot.SetTargetVelocities(0.0, 0.0)
                     # print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
+                    print("Red - Placing Item on a shelf")
                     state = 19
                 else:
                     v = kp * error
@@ -631,6 +666,7 @@ if __name__ == '__main__':
                 bot.DropItemInClosestShelfBay()
                 # print("Item dropped successfully.")
                 backTime = time.time()
+                print("Yellow - Moving to picking station or transporting item to target bay")
                 state = 20
 
             # ------------------ STATE 20: Reverse a bit ------------------------------
@@ -659,7 +695,6 @@ if __name__ == '__main__':
 
             # ------------------ STATE 22: Drive to wall until certain distance (return to return zone) ------------------------------                 
             elif state == 22:
-                print(aisle_id == "1")
                 if aisle_id == "1":
                     state = 221
                 else:
@@ -712,7 +747,6 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.15)
 
                     if markerDistance < 0.55:
-                        print("HELLO")
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 123
                 else:
@@ -732,7 +766,7 @@ if __name__ == '__main__':
                 v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
                 
                 bot.SetTargetVelocities(v, 0.0)
-                print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
                 
                 # within tolerance
                 if abs(error) <= 0.1:  # 1 cm offset tolerance
@@ -785,21 +819,23 @@ if __name__ == '__main__':
                 if error-0.009 <= 0.01:  # within ±1 cm
                     v = 0.0
                     bot.SetTargetVelocities(0.0, 0.0)
-                    print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
+                    # print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
                     state = 25
                 else:
                     v = kp * error
                     v = max(min(v, 0.05), -0.05)  # clamp both directions
                     bot.SetTargetVelocities(v, 0.0)
-                    print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                    # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
             # ------------------ STATE 25: Get next delivery instructions or end ------------------------------
             elif state == 25:
                 if deliveryNo < len(deliveries) - 1:
                     deliveryNo += 1
                     state = 5
+                    print("Next delivery...")
+                    print("Yellow - Moving to picking station or transporting item to target bay")
                 else:
-                    print("FINISHED!!!!!")
+                    print("Finished deliveries!")
                     state = 100
                 
                 
