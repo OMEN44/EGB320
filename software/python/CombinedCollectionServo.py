@@ -134,7 +134,16 @@ servo2 = AngularServo(
     max_pulse_width=0.0025
 )
 
-def smooth_move(servo1_target, servo2_target, step=0.3, delay=0.01):
+# Gripper Actuation (Continuous Rotation Servo FS90R)
+servo3 = AngularServo(
+    23,  # GPIO18
+    min_angle=-90,
+    max_angle=90,
+    min_pulse_width=0.0005,
+    max_pulse_width=0.0025
+)
+
+def smooth_move(servo1_target, servo2_target, step=0.2, delay=0.005):
     current_servo1 = servo1.angle if servo1.angle is not None else 0
     current_servo2 = servo2.angle if servo2.angle is not None else 0
     
@@ -166,31 +175,35 @@ def idle_position():
     print('Idle Position')
     smooth_move(servo1_target=-50, servo2_target=90)
 
-def ground():
-    print('Idle Position')
-    smooth_move(servo1_target=-50, servo2_target=90)
+def picking_bay_collect():
+    print('Picking Bay Collection')
+    smooth_move(servo1_target=-45, servo2_target=20)
 
 def low_shelf():
     print('Low Shelf')
-    smooth_move(servo1_target=-20, servo2_target=35)
+    smooth_move(servo1_target=-20, servo2_target=20)
 
 def middle_shelf():
     print('Middle Shelf')
-    smooth_move(servo1_target=7, servo2_target=-5)
+    smooth_move(servo1_target=10, servo2_target=-15)
 
 def high_shelf():
     print('High Shelf')
-    smooth_move(servo1_target=30, servo2_target=-30)
+    smooth_move(servo1_target=45, servo2_target=-49)
 
-def open_gripper():
-    print('Actuate Gripper')
-    # Placeholder for gripper actuation logic
-    sleep(1)
+def gripper_clockwise(duration=0.10):
+    print('Rotating Gripper Clockwise')
+    servo3.value = -0.5  # Adjust speed as needed (-1 for full speed clockwise)
+    sleep(duration)
+    servo3.value = 0.1  # Stop
+    print('Gripper Stopped')
 
-def close_gripper():
-    print('Actuate Gripper')
-    # Placeholder for gripper actuation logic
-    sleep(1)
+def gripper_anticlockwise(duration=0.1):
+    print('Rotating Gripper Anticlockwise')
+    servo3.value = 0.5  # Adjust speed as needed (1 for full speed anticlockwise)
+    sleep(duration)
+    servo3.value = 0.1  # Stop
+    print('Gripper Stopped')
 
 while True:
     user_input = input("Enter 0 (Do nothing), 1 (Idle), 2 (Low Shelf), 3 (Middle Shelf), 4 (High Shelf), 5 (Actuate Gripper), or q to quit: ")
@@ -207,7 +220,11 @@ while True:
     elif user_input == "4":
         high_shelf()
     elif user_input == "5":
-        actuate_gripper()
+        gripper_clockwise()
+    elif user_input == "6":
+        gripper_anticlockwise()
+    elif user_input == "7":
+        picking_bay_collect()
     elif user_input.lower() == "q":
         print("Exiting program.")
         break
