@@ -30,7 +30,7 @@ from time import sleep
 
 # FS90R Continuous rotation servo on GPIO12
 servo = Servo(
-    12,
+    18,
     min_pulse_width=0.0005,
     max_pulse_width=0.0025
 )
@@ -54,7 +54,6 @@ servo = Servo(
 # smooth_speed(0.0, 0.2, step=0.1, delay=0.1)  # accelerate forward
 # sleep(1)
 
-print("Rotating CW...")
-servo.value = -0.1
-sleep(0.9) # time
-
+print("Closing")
+servo.value = -0.15 # Closing is -
+sleep(1) # time
