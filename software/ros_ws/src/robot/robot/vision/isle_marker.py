@@ -25,7 +25,7 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 200 and area <  2000:
+        if area > 200 and area <  7000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
             # outputFrame = cv2.drawContours(outputFrame, [approx], -1, (0, 0, 255), 2)
             if cv2.isContourConvex(approx) and len(approx) > 4:
