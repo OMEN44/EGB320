@@ -5,13 +5,40 @@ import numpy as np
 WIDTH = 640
 HEIGHT = 480
 # Calculated using (isle marker width in px * distance to isle marker in cm) / real isle marker width in cm
-FOCAL_LENGTH = (32 * 100) / 7
+FOCAL_LENGTH = (50 * 50) / 7 # undistorted frame
+# FOCAL_LENGTH = (120 * 26) / 7 # distorted frame
 FOV = 140
 
+def getPoi(name, type, actualWidth, perceivedWidth, objectX):
+    return {
+        'name': name,
+        'type': type,
+        'distance': int(objectDistanceWithCorrection(actualWidth, perceivedWidth, objectX + perceivedWidth / 2) * 1000),
+        'bearing': [
+            int(objectAngle(objectX) * 1000), 
+            int(objectAngle(objectX + perceivedWidth / 2) * 1000), 
+            int(objectAngle(objectX + perceivedWidth) * 1000)
+        ]
+    }
+
 def objectDistance(actualWidth, perceivedWidth):
+    # range from 23 to 34px
+    # actualWidth in cm
+    # 100cm to 64cm
+
+
+    # 63cm @ 63deg
     if perceivedWidth == 0:
         return 0
     return np.round((actualWidth * FOCAL_LENGTH) / perceivedWidth, 2)
+
+def objectDistanceWithCorrection(actualWidth, perceivedWidth, objectX):
+    angle = objectAngle(objectX)
+    distance = objectDistance(actualWidth, perceivedWidth)
+    
+    # Use linear approximation to correct distance based on angle
+    # 0.33/50
+    return ((0.33/50) * abs(angle) + 1) * distance
 
 def objectAngle(objectX):
     # Calculate the angle of the object from the center of the frame

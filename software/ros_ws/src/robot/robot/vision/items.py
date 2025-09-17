@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from robot.vision.utils import objectDistance, objectAngle
+from robot.vision.utils import getPoi
 
 ITEM_WIDTHS = [
     6, # Bowl
@@ -32,10 +32,9 @@ def findItems(hsvframe, outputFrame):
         area = cv2.contourArea(contour)
         if area > 150 and area < 8000:
             x, y, w, h = cv2.boundingRect(contour)
-            distance = objectDistance(ITEM_WIDTHS[0], w)
-            angle = objectAngle(x + w / 2)
+            poi = getPoi('item', 0, ITEM_WIDTHS[0], w, x)
             outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)
-            outputFrame = cv2.putText(outputFrame, f'{int(distance)}cm, {int(angle)}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
-            data.append(f'item: {distance}cm @ {angle}°')
+            outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
+            data.append(poi)
             
     return [outputFrame, data]
