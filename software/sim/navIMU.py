@@ -24,8 +24,20 @@ pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
 shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
+deliveries = []
+for picking_bay in [1, 2, 3]:
+    shelf_first = random.randint(0, 5)   # first number 0–5
+    shelf_second = random.randint(1, 4)  # second number 1–4
+    shelf_id = float(f"{shelf_first}.{shelf_second}")  # combine into format like 1.4
+    deliveries.append((picking_bay, shelf_id))
+
+# Unpack into individual variables
+delivery_one, delivery_two, delivery_three = deliveries
+
+print(deliveries)
+
 # Example deliveries: (picking bay number, shelf id)
-deliveries = [(1, 1.4), (2, 0.3), (3, 4.3)]
+# deliveries = [(1, 1.4), (2, 0.3), (3, 4.3)]
 
 deliveryNo = 0
 
@@ -529,7 +541,7 @@ if __name__ == '__main__':
                     else:
                         # No valid direction -> gentle spin to search
                         bot.SetTargetVelocities(0.0, 0.15)
-                    if markerDistance < 1.24:
+                    if markerDistance < 1.26:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 13
                 else:
@@ -755,7 +767,7 @@ if __name__ == '__main__':
 
             # ------------------ STATE 23: Drive back to return zone ------------------------------
             elif state == 23:
-                target_distance = 0.45
+                target_distance = 0.5
                 error = distance - target_distance
                 
                 # proportional control
