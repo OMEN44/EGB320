@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32 # Import the Int32 message type
 from std_msgs.msg import Bool
 from robot_interfaces.msg import PoiGroup
+import time
 
 import numpy as np
 import math
@@ -35,7 +36,7 @@ class Navigation(Node):
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
         self.target_item_pub = self.create_publisher(String, '/target_item', 10)
-        self.velocities_pub = self.create_publisher(Twist, '/mobility_twist', 10)
+        self.velocities_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
@@ -233,21 +234,17 @@ class Navigation(Node):
                 else:
                     self.publish_velocity(0.0, omega)
             else:
+                time_to_shelf = time.time()
                 self.state = 'DRIVE_INTO_AISLE'
                  
 
         elif self.state == 'DRIVE_TO_SHELF':
-            distance_to_shelf = self.get_ultrasonic_distance()  # Placeholder function
-            target_distance = 0.02
-            error = distance_to_shelf - target_distance
-
-            if abs(error) < 0.01:
+            if (time.time() - time_to_shelf) > 5.0:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'DROP_ITEM'
-                self.get_logger().info("At shelf, dropping item...")
-            else:
-                v = 0.05
-                self.publish_velocity(v, 0.0)
+                return
+            else: 
+                self.publish_velocity(0.01, 0.0)
 
         elif self.state == 'DROP_ITEM':
             self.publish_collection(4) # Command to drop item
