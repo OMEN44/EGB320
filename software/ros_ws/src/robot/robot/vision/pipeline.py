@@ -51,7 +51,9 @@ def proccess(self, frame):
     poiMsg.pois = []
 
     for poi in data:
-        
+        print()
+        print('POI:', poi)
+        print(poi['name'])
         poiMsg.pois.append(Poi(name=poi['name'], type=poi['type'], distance=poi['distance'], bearing=poi['bearing'].copy()))
 
     self.poi.publish(poiMsg)

@@ -53,6 +53,8 @@ class Navigation(Node):
         self.aisle_markers = []
         self.shelves = []
 
+        self.pois = []
+
         self.phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
 
         self.arm_status = False  
@@ -136,19 +138,23 @@ class Navigation(Node):
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
-        self.pois = {}
-        for item in msg.data:
-            t = item.name
-            if t not in self.pois:
-                self.pois[t] = []
-            self.pois[t].append((item.data, (item.distance)/100000, (item["bearing"])/1000))
+        print(msg)
+        self.pois = []
+        for item in msg.pois:
+            self.pois.append((item.name, item.type, (item.distance)/100000, (item.bearing[1])/1000))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
 
     def filter_poi(self, poi_type):
-        return self.pois.get(poi_type, [])
-    
+        
+        listOfPois = []
+        print('this:', self.pois)
+        for poi in self.pois:
+            if poi_type == poi[0]:
+                listOfPois.append(poi)
+        return listOfPois
+
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
         if self.state == 'START':
@@ -157,15 +163,18 @@ class Navigation(Node):
             self.state = 'DRIVE_INTO_AISLE'
 
         elif self.state == 'DRIVE_INTO_AISLE':
-            self.send_vision_data("isleMarkers,obstacles,shelves", "")
-            self.objects = self.filter_poi("obstacle")
+            self.send_vision_data("isleMarkers,shelves", "")
+            # self.objects = self.filter_poi("obstacle")
             self.aisle_markers = self.filter_poi("isleMarker")
             self.shelves = self.filter_poi("shelf")
-            distance_to_marker = self.aisle_markers[self.aisle_index+1]["distance"]
-            marker_bearing = self.aisle_markers[self.aisle_index+1]["bearing"][1] 
+            if len(self.aisle_markers) == 0:
+                print('NO MARKERS')
+                return
+            distance_to_marker = self.aisle_markers[0]["distance"]
+            marker_bearing = self.aisle_markers[0]["bearing"][1] 
             all_obstacles = []
             for group in (self.objects, self.shelves):
-                all_obstacles.extend([(obj["distance"], obj["bearing"]) for obj in group])
+                all_obstacles.extend([(obj.distance, obj.bearing) for obj in group])
             error = distance_to_marker - self.shelfMarkerDistance
             U_rep = self.repulsiveField(all_obstacles, self.phi)
             U_att = self.attractiveField((distance_to_marker, marker_bearing), self.phi)

@@ -11,8 +11,10 @@ isleMarkerCount = []
 
 def findIsleMarkers(self, hsvFrame, outputFrame):
     # make a mask for the color black
-    lower_black = np.array([0, 0, 0])
-    upper_black = np.array([100, 140, 120])
+    # lower_black = np.array([0, 0, 0])
+    # upper_black = np.array([100, 140, 120])
+    lower_black = np.array([0, 0, 110])
+    upper_black = np.array([180, 100, 200])
 
     mask = cv2.inRange(hsvFrame, lower_black, upper_black)
 
@@ -25,13 +27,13 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 200 and area < 7000:
+        if area > 200 and area < 10000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
-            # outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 0), 2)
             if cv2.isContourConvex(approx) and len(approx) > 4:
                 
                 x, y, w, h = cv2.boundingRect(approx)
                 if abs(w - h) < 10:
+                    outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 0), 2)
                     # outputFrame = cv2.circle(outputFrame, (int(x + w / 2), int(y + h / 2)), 5, (0, 255, 0), -1)
                     clusterCenter[0][0] += (x + w / 2)
                     clusterCenter[0][1] += (y + h / 2)
@@ -51,7 +53,7 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
 def findPickingStation(self, hsvFrame, outputFrame):
     # make a mask for the color black
     lower_black = np.array([0, 0, 0])
-    upper_black = np.array([179, 255, 50])
+    upper_black = np.array([179, 255, 80])
 
     mask = cv2.inRange(hsvFrame, lower_black, upper_black)
 
@@ -65,7 +67,7 @@ def findPickingStation(self, hsvFrame, outputFrame):
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area > 70 and area < 2000:
+        if area > 70 and area < 10000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
             x, y, w, h = cv2.boundingRect(approx)
             # If convex and has 4 sides and is roughly square
@@ -77,7 +79,7 @@ def findPickingStation(self, hsvFrame, outputFrame):
                 else:
                     newCluster = True
                     for cluster in isleClusters:
-                        if abs(cluster[0][0] - x) < (w * 2.5): # Only check need to check in the x direction
+                        if abs(cluster[0][0] - x) < (w * 3): # Only check need to check in the x direction
                             # check to see if this is a double up
                             duplicate = False
                             for r in cluster[3]:

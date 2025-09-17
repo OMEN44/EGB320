@@ -34,7 +34,7 @@ def findItems(hsvframe, outputFrame):
             x, y, w, h = cv2.boundingRect(contour)
             poi = getPoi('item', 0, ITEM_WIDTHS[0], w, x)
             outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)
-            outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
+            # outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
             data.append(poi)
             
     return [outputFrame, data]
