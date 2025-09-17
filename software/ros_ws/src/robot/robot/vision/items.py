@@ -4,12 +4,12 @@ import numpy as np
 from robot.vision.utils import getPoi
 
 ITEM_WIDTHS = [
-    6, # Bowl
-    3, # Coffee Cup
-    3, # Robot Oil Bottle
+    5.5, # Bowl
+    4.5, # Coffee Cup
+    2, # Robot Oil Bottle
     4, # Rubiks Cube
-    3, # Soccer Ball
-    3, # Wheet Bots
+    4.5, # Soccer Ball
+    6.5, # Wheet Bots
 ]
 
 # range
@@ -24,7 +24,7 @@ def findItems(hsvframe, outputFrame):
 
     # create a mask using self.colourMask
     # mask = cv2.inRange(hsvframe, np.array([0, 5, 0]), np.array([15, 255, 255]))
-    mask = cv2.inRange(hsvframe, np.array([0, 10, 200]), np.array([20, 255, 255]))
+    mask = cv2.inRange(hsvframe, np.array([0, 100, 100]), np.array([15, 255, 255]))
 
     # Find items
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -32,7 +32,7 @@ def findItems(hsvframe, outputFrame):
         area = cv2.contourArea(contour)
         if area > 150 and area < 8000:
             x, y, w, h = cv2.boundingRect(contour)
-            poi = getPoi('item', 0, ITEM_WIDTHS[0], w, x)
+            poi = getPoi('item', 0, ITEM_WIDTHS[1], w, x)
             outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)
             # outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
             data.append(poi)
