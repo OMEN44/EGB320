@@ -17,15 +17,15 @@ shelf_to_aisle = {
     "2": ["2", np.pi/2],
     "3": ["2", -np.pi/2],
     "4": ["3", np.pi/2],
-    "5": ["3", -np.pi/2]   # fixed duplicate key
+    "5": ["3", -np.pi/2]   
 }
 
-pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.15}
-shelf_distance_marker = {"1":1, "2":1, "3":0.42, "4":2}
+pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
+shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
 # Example deliveries: (picking bay number, shelf id)
-deliveries = [(1, 1.3), (2, 0.3), (3, 4.3)]
+deliveries = [(1, 1.4), (2, 0.3), (3, 4.3)]
 
 deliveryNo = 0
 
