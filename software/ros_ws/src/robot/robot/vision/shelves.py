@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 
+from robot.vision.utils import getPoi
+
 def findShelves(self, hsvFrame, outputFrame):
+
+    data = []
     
     lower_blue = np.array([100, 100, 0])
     upper_blue = np.array([150, 255, 255])
@@ -23,7 +27,9 @@ def findShelves(self, hsvFrame, outputFrame):
             outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (255, 0, 0), 2)
             outputFrame = cv2.putText(outputFrame, f'Shelf', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
+            data.append(getPoi('shelves', 1, -1, w, x))
+
     # outputFrame = cv2.Canny(cv2.bitwise_and(outputFrame, outputFrame, mask=mask), 100, 200)
     # outputFrame = cv2.bitwise_and(outputFrame, outputFrame, mask=mask)
 
-    return [outputFrame, []]
+    return [outputFrame, data]

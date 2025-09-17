@@ -4,7 +4,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32 # Import the Int32 message type
 from std_msgs.msg import Bool
-
+from robot_interfaces.msg import PoiGroup
+import time
 
 import numpy as np
 import math
@@ -35,11 +36,11 @@ class Navigation(Node):
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
         self.target_item_pub = self.create_publisher(String, '/target_item', 10)
-        self.velocities_pub = self.create_publisher(Twist, '/mobility_twist', 10)
+        self.velocities_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
-        self.point_of_interest_sub = self.create_subscription(String, "/poi", self.poi_callback, 10)
+        self.point_of_interest_sub = self.create_subscription(PoiGroup, "/poi", self.poi_callback, 10)
         self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
         # State machine variables
@@ -52,6 +53,8 @@ class Navigation(Node):
         self.objects = []
         self.aisle_markers = []
         self.shelves = []
+
+        self.pois = []
 
         self.phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
 
@@ -136,19 +139,23 @@ class Navigation(Node):
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
-        self.pois = {}
-        for item in msg.data:
-            t = item["type"]
-            if t not in self.pois:
-                self.pois[t] = []
-            self.pois[t].append((item["data"], item["distance"], item["bearing"]))
+        print(msg)
+        self.pois = []
+        for item in msg.pois:
+            self.pois.append((item.name, item.type, (item.distance)/100000, (item.bearing[1])/1000))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
 
     def filter_poi(self, poi_type):
-        return self.pois.get(poi_type, [])
-    
+        
+        listOfPois = []
+        print('this:', self.pois)
+        for poi in self.pois:
+            if poi_type == poi[0]:
+                listOfPois.append(poi)
+        return listOfPois
+
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
         if self.state == 'START':
@@ -157,15 +164,18 @@ class Navigation(Node):
             self.state = 'DRIVE_INTO_AISLE'
 
         elif self.state == 'DRIVE_INTO_AISLE':
-            self.send_vision_data("isleMarkers,obstacles,shelves", "")
-            self.objects = self.filter_poi("obstacle")
+            self.send_vision_data("isleMarkers,shelves", "")
+            # self.objects = self.filter_poi("obstacle")
             self.aisle_markers = self.filter_poi("isleMarker")
             self.shelves = self.filter_poi("shelf")
-            distance_to_marker = self.aisle_markers[self.aisle_index+1]["distance"]
-            marker_bearing = self.aisle_markers[self.aisle_index+1]["bearing"][1] 
+            if len(self.aisle_markers) == 0:
+                print('NO MARKERS')
+                return
+            distance_to_marker = self.aisle_markers[0]["distance"]
+            marker_bearing = self.aisle_markers[0]["bearing"][1] 
             all_obstacles = []
             for group in (self.objects, self.shelves):
-                all_obstacles.extend([(obj["distance"], obj["bearing"]) for obj in group])
+                all_obstacles.extend([(obj.distance, obj.bearing) for obj in group])
             error = distance_to_marker - self.shelfMarkerDistance
             U_rep = self.repulsiveField(all_obstacles, self.phi)
             U_att = self.attractiveField((distance_to_marker, marker_bearing), self.phi)
@@ -225,21 +235,17 @@ class Navigation(Node):
                 else:
                     self.publish_velocity(0.0, omega)
             else:
+                time_to_shelf = time.time()
                 self.state = 'DRIVE_INTO_AISLE'
                  
 
         elif self.state == 'DRIVE_TO_SHELF':
-            distance_to_shelf = self.get_ultrasonic_distance()  # Placeholder function
-            target_distance = 0.02
-            error = distance_to_shelf - target_distance
-
-            if abs(error) < 0.01:
+            if (time.time() - time_to_shelf) > 5.0:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'DROP_ITEM'
-                self.get_logger().info("At shelf, dropping item...")
-            else:
-                v = 0.05
-                self.publish_velocity(v, 0.0)
+                return
+            else: 
+                self.publish_velocity(0.01, 0.0)
 
         elif self.state == 'DROP_ITEM':
             self.publish_collection(4) # Command to drop item

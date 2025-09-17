@@ -1,9 +1,9 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Int8, String
 
-import gpiozero
-import time
+from gpiozero import AngularServo
+from time import sleep
 
 class Collection(Node):
     def __init__(self):
@@ -35,13 +35,10 @@ class Collection(Node):
         )
 
         # Initialise subscribers
-        self.subscription = self.create_subscription(String, '/servo_actions', self.listener_callback, 10) # Does this need to be collection_action?
+        self.subscription = self.create_subscription(Int8, '/servo_actions', self.on_servo_command, 10) # Does this need to be collection_action?
 
         # Initalise publishers
         self.status_publisher = self.create_publisher(String, '/servo_status', 10) # Does this need to be arm_status??
-    
-    def listener_callback(self, msg):
-        self.get_logger().info('I heard: "%s"' % msg.data)
 
     def on_servo_command(self, msg):
         command = msg.data
