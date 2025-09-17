@@ -45,7 +45,7 @@ def objectAngle(objectX):
     centerX = WIDTH / 2
     dx = objectX - centerX
     angle = (dx / centerX) * (FOV / 2)
-    return np.round(angle, 2)
+    return np.round(angle * (np.pi / 180), 2)
 
 def setupFakeCam():
     camera1 = pyfakewebcam.FakeWebcam('/dev/video4', WIDTH, HEIGHT)
