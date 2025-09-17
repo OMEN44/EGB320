@@ -143,7 +143,7 @@ servo3 = AngularServo(
     max_pulse_width=0.0025
 )
 
-def smooth_move(servo1_target, servo2_target, step=0.2, delay=0.005):
+def smooth_move(servo1_target, servo2_target, step=0.1, delay=0.01):
     current_servo1 = servo1.angle if servo1.angle is not None else 0
     current_servo2 = servo2.angle if servo2.angle is not None else 0
     
@@ -177,19 +177,19 @@ def idle_position():
 
 def picking_bay_collect():
     print('Picking Bay Collection')
-    smooth_move(servo1_target=-45, servo2_target=20)
+    smooth_move(servo1_target=-45, servo2_target=10)
 
 def low_shelf():
     print('Low Shelf')
-    smooth_move(servo1_target=-20, servo2_target=20)
+    smooth_move(servo1_target=-25, servo2_target=10)
 
 def middle_shelf():
     print('Middle Shelf')
-    smooth_move(servo1_target=10, servo2_target=-15)
+    smooth_move(servo1_target=35, servo2_target=-20)
 
 def high_shelf():
     print('High Shelf')
-    smooth_move(servo1_target=45, servo2_target=-49)
+    smooth_move(servo1_target=40, servo2_target=-30)
 
 def gripper_clockwise(duration=0.10):
     print('Rotating Gripper Clockwise')
