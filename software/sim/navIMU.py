@@ -24,20 +24,20 @@ pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
 shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
-deliveries = []
-for picking_bay in [1, 2, 3]:
-    shelf_first = random.randint(0, 5)   # first number 0–5
-    shelf_second = random.randint(1, 4)  # second number 1–4
-    shelf_id = float(f"{shelf_first}.{shelf_second}")  # combine into format like 1.4
-    deliveries.append((picking_bay, shelf_id))
+# deliveries = []
+# for picking_bay in [1, 2, 3]:
+#     shelf_first = random.randint(0, 5)   # first number 0–5
+#     shelf_second = random.randint(1, 4)  # second number 1–4
+#     shelf_id = float(f"{shelf_first}.{shelf_second}")  # combine into format like 1.4
+#     deliveries.append((picking_bay, shelf_id))
 
-# Unpack into individual variables
-delivery_one, delivery_two, delivery_three = deliveries
+# # Unpack into individual variables
+# delivery_one, delivery_two, delivery_three = deliveries
 
-print(deliveries)
+# print(deliveries)
 
 # Example deliveries: (picking bay number, shelf id)
-# deliveries = [(1, 1.4), (2, 0.3), (3, 4.3)]
+deliveries = [(1, 5.4), (2, 0.3), (3, 0.3)]
 
 deliveryNo = 0
 
@@ -130,8 +130,9 @@ sceneParameters.obstacle2_StartingPosition = -1
 robot_starting_x = random.uniform(-0.8, -0.2)  # Random float between 1.5 and 4.2
 robot_starting_y = random.uniform(-0.85, -0.1)  # Random float between 1.5 and 4.2
 robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
-sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
+# sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
 # sceneParameters.robotStartingPosition = [-0.5, -0.3, np.pi/2]  # x, y, theta in radians
+sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, math.radians(225)]  # x, y, theta in radians
 
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
@@ -174,7 +175,9 @@ if __name__ == '__main__':
 
         phi = np.linspace(-np.pi, np.pi, 360)  # Shared angular grid for fields
         print("Yellow - Moving to picking station or transporting item to target bay")
+
         while True:
+            # print(state)
             bot.UpdateObjectPositions()
 
             # Order here must match what GetDetectedObjects returns
@@ -418,7 +421,7 @@ if __name__ == '__main__':
                 # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
                 # stop when within ±1 cm of 0.45 m
-                if abs(error) <= 0.015:
+                if abs(error) <= 0.02:
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 7
 
@@ -584,6 +587,10 @@ if __name__ == '__main__':
                 if abs(error) <= 0.07:  # 1 cm offset tolerance
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 15
+                if (aisle_id == "1"):
+                    if distance < aisleWallDistance:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        state = 15
 
             # ------------------ STATE 15: Turn to face aisle marker ------------------------------
             elif state == 15:
@@ -654,7 +661,7 @@ if __name__ == '__main__':
             
             # ------------------ STATE 18: Drive to shelf bay to drop item ------------------------------
             elif state == 18:
-                target_distance = 0.06   # 7 cm
+                target_distance = 0.06   #  6m
                 error = distance - target_distance
 
                 kp = 0.3   # proportional gain
@@ -708,6 +715,10 @@ if __name__ == '__main__':
             # ------------------ STATE 22: Drive to wall until certain distance (return to return zone) ------------------------------                 
             elif state == 22:
                 if aisle_id == "1":
+                    return_index = 2
+                    state = 221
+                elif aisle_id == "2":
+                    return_index = 0
                     state = 221
                 else:
                     state = 23
@@ -715,13 +726,13 @@ if __name__ == '__main__':
             # ------------------ STATE 221: Turn to face picking station (if aisle 1 delivery) ------------------------------
             elif state == 221:
                 # bot.GetCameraImage()
-                has_row2 = (pickingStationRB and pickingStationRB[2] is not None and len(pickingStationRB[2]) > 0)
+                has_row2 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
                 if has_row2:
-                    stationBearing = math.degrees(pickingStationRB[2][1])
+                    stationBearing = math.degrees(pickingStationRB[return_index][1])
                     kp = 0.01
                     rotation_velocity = kp * stationBearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(stationBearing) < 1:
+                    if abs(stationBearing) < 5:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 222
                     else:
@@ -731,16 +742,16 @@ if __name__ == '__main__':
 
             # ------------------ STATE 222: Drive toward Picking Station with fields ------------------------------
             elif state == 222:
-                has_ps1 = (pickingStationRB and pickingStationRB[2] is not None and len(pickingStationRB[2]) > 0)
+                has_ps1 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
                 if has_ps1:
-                    markerDistance = pickingStationRB[2][0]
+                    markerDistance = pickingStationRB[return_index][0]
                     # Gather all detected objects into one list
                     all_obstacles = []
                     for group in (obstaclesRB, shelfRB):
                         if group:
                             all_obstacles.extend(group)   # merge lists
                     U_rep = repulsiveField(all_obstacles, phi)
-                    U_att = attractiveField(pickingStationRB[2], phi)
+                    U_att = attractiveField(pickingStationRB[return_index], phi)
                     best_bearing = bestBearing(U_att, U_rep, phi)
 
                     if best_bearing is not None:
@@ -796,7 +807,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):
+                if abs(e_theta) < np.radians(1):    
                     if (distance < 0.2):
                         state = 22
                     else:
@@ -848,14 +859,9 @@ if __name__ == '__main__':
                     print("Yellow - Moving to picking station or transporting item to target bay")
                 else:
                     print("Finished deliveries!")
+                    print(deliveries)
                     state = 100
                 
-                
-
-
-
-
-
 
             elif state == 100:
                 bot.SetTargetVelocities(0.0, 0.0)
