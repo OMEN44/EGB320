@@ -4,7 +4,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32 # Import the Int32 message type
 from std_msgs.msg import Bool
-
+from robot_interfaces.msg import PoiGroup
 
 import numpy as np
 import math
@@ -39,7 +39,7 @@ class Navigation(Node):
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
-        self.point_of_interest_sub = self.create_subscription(String, "/poi", self.poi_callback, 10)
+        self.point_of_interest_sub = self.create_subscription(PoiGroup, "/poi", self.poi_callback, 10)
         self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
         # State machine variables
@@ -138,10 +138,10 @@ class Navigation(Node):
     def poi_callback(self, msg):
         self.pois = {}
         for item in msg.data:
-            t = item["type"]
+            t = item.name
             if t not in self.pois:
                 self.pois[t] = []
-            self.pois[t].append((item["data"], item["distance"], item["bearing"]))
+            self.pois[t].append((item.data, (item.distance)/100000, (item["bearing"])/1000))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
