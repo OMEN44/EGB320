@@ -135,11 +135,10 @@ class Navigation(Node):
         collection_msg = Int32()
         collection_msg.data = collection_command
         self.collection_pub.publish(collection_msg)
-        self.get_logger().info("Command sent to collection...")
+        # self.get_logger().info("Command sent to collection...")
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
-        print(msg)
         self.pois = []
         for item in msg.pois:
             self.pois.append((item.name, item.type, (item.distance)/100000, (item.bearing[1])/1000))
@@ -150,14 +149,15 @@ class Navigation(Node):
     def filter_poi(self, poi_type):
         
         listOfPois = []
-        print('this:', self.pois)
         for poi in self.pois:
             if poi_type == poi[0]:
                 listOfPois.append(poi)
+
         return listOfPois
 
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
+        print(self.state)
         if self.state == 'START':
             self.aisle_index, self.shelfMarkerDistance, self.shelfOrientation = self.get_measurements(shelfID)
             self.get_logger().info(f"Target shelf {shelfID}, aisle {self.aisle_index+1}")
@@ -166,13 +166,15 @@ class Navigation(Node):
         elif self.state == 'DRIVE_INTO_AISLE':
             self.send_vision_data("isleMarkers,shelves", "")
             # self.objects = self.filter_poi("obstacle")
-            self.aisle_markers = self.filter_poi("isleMarker")
+            self.aisle_markers = self.filter_poi("isleMarkers")
             self.shelves = self.filter_poi("shelf")
+            # print(self.aisle_markers)
             if len(self.aisle_markers) == 0:
-                print('NO MARKERS')
+                # print('NO MARKERS')
                 return
-            distance_to_marker = self.aisle_markers[0]["distance"]
-            marker_bearing = self.aisle_markers[0]["bearing"][1] 
+            # print('YAY')
+            distance_to_marker = self.aisle_markers[0][2]
+            marker_bearing = self.aisle_markers[0][3]
             all_obstacles = []
             for group in (self.objects, self.shelves):
                 all_obstacles.extend([(obj.distance, obj.bearing) for obj in group])

@@ -92,7 +92,6 @@ class Vision(Node):
 
     def updatePipeline(self, msg):
         self.pipeline = msg.data.split(',')
-        self.get_logger().info(f'Pipeline updated: {self.pipeline}')
 
 def main():
     rclpy.init()
