@@ -137,11 +137,19 @@ class Navigation(Node):
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
         self.pois = {}
-        for item in msg.data:
+        for item in msg.pois:
             t = item.name
             if t not in self.pois:
                 self.pois[t] = []
-            self.pois[t].append((item.data, (item.distance)/100000, (item["bearing"])/1000))
+            # Normalise distance and bearings as needed
+            distance = item.distance / 1000.0   # example: mm → m
+            bearings = [b / 1000.0 for b in item.bearing]
+            self.pois[t].append({
+                "type": item.type,
+                "distance": distance,
+                "bearing": bearings
+            })
+
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
