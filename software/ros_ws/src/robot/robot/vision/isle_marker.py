@@ -23,22 +23,32 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
     # 0: (x,y) position
     # 1: number of markers
     # 2: average width
-    clusterCenter = [[0,0], 0, 0]
+    # 3: list of marker rectangles
+    clusterCenter = [[0,0], 0, 0, []]
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area > 200 and area < 10000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
-            if cv2.isContourConvex(approx) and len(approx) > 4:
+            if cv2.isContourConvex(approx) and len(approx) > 6:
                 
                 x, y, w, h = cv2.boundingRect(approx)
                 if abs(w - h) < 10:
-                    outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 0), 2)
-                    # outputFrame = cv2.circle(outputFrame, (int(x + w / 2), int(y + h / 2)), 5, (0, 255, 0), -1)
-                    clusterCenter[0][0] += (x + w / 2)
-                    clusterCenter[0][1] += (y + h / 2)
-                    clusterCenter[1] += 1
-                    clusterCenter[2] += w
+                    # If same positionn assume duplicate
+                    dulicate = False
+                    for prev in clusterCenter[3]:
+                        if abs(prev[0] - x) < (w * 0.5) and abs(prev[1] - y) < (h * 0.5):
+                            dulicate = True
+                            break
+
+                    if not dulicate:
+                        outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 0), 2)
+                        # outputFrame = cv2.circle(outputFrame, (int(x + w / 2), int(y + h / 2)), 5, (0, 255, 0), -1)
+                        clusterCenter[0][0] += (x + w / 2)
+                        clusterCenter[0][1] += (y + h / 2)
+                        clusterCenter[1] += 1
+                        clusterCenter[2] += w
+                        clusterCenter[3].append((x, y, w, h))
                 
     if (clusterCenter[1] > 0):
         clusterCenter[0][0] = clusterCenter[0][0] / clusterCenter[1]
