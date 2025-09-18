@@ -127,8 +127,8 @@ sceneParameters.obstacle0_StartingPosition = -1
 sceneParameters.obstacle1_StartingPosition = -1
 sceneParameters.obstacle2_StartingPosition = -1
 
-robot_starting_x = random.uniform(-0.8, -0.2)  # Random float between 1.5 and 4.2
-robot_starting_y = random.uniform(-0.85, -0.1)  # Random float between 1.5 and 4.2
+robot_starting_x = random.uniform(-0.8, -0.4)  
+robot_starting_y = random.uniform(-0.85, -0.1)  
 robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
 # sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
 # sceneParameters.robotStartingPosition = [-0.5, -0.3, np.pi/2]  # x, y, theta in radians
@@ -784,7 +784,7 @@ if __name__ == '__main__':
 
             # ------------------ STATE 23: Drive back to return zone ------------------------------
             elif state == 23:
-                target_distance = 0.5
+                target_distance = 0.53
                 error = distance - target_distance
                 
                 # proportional control
