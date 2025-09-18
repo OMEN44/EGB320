@@ -141,7 +141,7 @@ class Navigation(Node):
     def poi_callback(self, msg):
         self.pois = []
         for item in msg.pois:
-            self.pois.append((item.name, item.type, (item.distance)/100000, (item.bearing[1])/1000))
+            self.pois.append((item.name, item.type, ((item.distance)/100000), [((item.bearing[0])/1000),((item.bearing[1])/1000), ((item.bearing[2])/1000)]))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
@@ -203,25 +203,28 @@ class Navigation(Node):
             self.publish_collection(3) # Command to lift arm
             if self.arm_status == True: # Assuming arm_status is updated via a subscriber
                 self.state = False
+                time_turn = time.time()
                 self.state = 'TURN_TO_SHELF'
                 self.get_logger().info("Turning to shelf...")
+
 
         elif self.state == 'TURN_TO_SHELF':
             turn_dir = (self.shelf_orientation < 0.0)
             if turn_dir:
-                omega = 0.3
+                omega = 0.2
             else: 
-                omega = -0.3
-            self.send_vision_data("shelves_bottom", "")
-            self.shelves = self.filter_poi("shelves_bottom")
-            if self.shelves is not None:
+                omega = -0.2
+            
+            turning_duration = abs(self.shelfOrientation) / omega
+            if (time.time() - time_turn) > turning_duration:
+                self.publish_velocity(0.0, 0.0)
                 self.state = 'ALIGN_TO_SHELF'
             else:
                 self.publish_velocity(0.0, omega)
 
         elif self.state == 'ALIGN_TO_SHELF':
-            self.send_vision_data("shelves_bottom", "")
-            self.shelves = self.filter_poi("shelves_bottom")
+            self.send_vision_data("shelves", "")
+            self.shelves = self.filter_poi("shelves")
             if self.shelves:
                 left_most_shelf = self.shelves[0]["bearing"][0]
                 right_most_shelf = self.shelves[0]["bearing"][2]
@@ -233,16 +236,16 @@ class Navigation(Node):
                 if abs(error) < 0.01:
                     self.publish_velocity(0.0, 0.0)
                     self.get_logger().info("Aligned with shelf...")
+                    time_to_shelf = time.time()
                     self.state = 'DRIVE_TO_SHELF'
                 else:
                     self.publish_velocity(0.0, omega)
             else:
-                time_to_shelf = time.time()
-                self.state = 'DRIVE_INTO_AISLE'
+                self.state = 'DRIVE_INTO_AISLE'           
                  
 
         elif self.state == 'DRIVE_TO_SHELF':
-            if (time.time() - time_to_shelf) > 5.0:
+            if (time.time() - time_to_shelf) > 3.0:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'DROP_ITEM'
                 return
