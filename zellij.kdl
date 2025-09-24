@@ -1,0 +1,34 @@
+layout cwd="~/perseus-v2" {
+    pane split_direction="vertical" {
+        pane split_direction="horizontal" {
+            pane command="yarn" {
+                cwd "~/perseus-v2/software/web_ui"
+                args "dev"
+            }
+            pane command="pixi" {
+                cwd "~/EGB320"
+                args "run" "bridge"
+            }
+        }
+        pane split_direction="horizontal" {
+            pane split_direction="vertical" {
+                pane command="yarn" {
+                    cwd "~/perseus-v2/software/web_ui"
+                    args "camera-online"
+                }
+                pane {
+                    cwd "~/perseus-v2"
+                }
+            }
+            pane split_direction="vertical" {
+                pane {
+                    cwd "~/perseus-v2"
+                }
+                pane {
+                    cwd "~/perseus-v2"
+                }
+            }
+        }
+    }
+}
+
