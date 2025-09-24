@@ -1,27 +1,32 @@
 import mpu6050
 import time
-import math
 
 # Create a new Mpu6050 object
-mpu = mpu6050.mpu6050(0x68)
+mpu6050 = mpu6050.mpu6050(0x68)
 
-# Start angle (in degrees)
-z_angle = 0.0
-prev_time = time.time()
+# Define a function to read the sensor data
+def read_sensor_data():
+    # Read the accelerometer values
+    accelerometer_data = mpu6050.get_accel_data()
 
+    # Read the gyroscope values
+    gyroscope_data = mpu6050.get_gyro_data()
+
+    # Read temp
+    temperature = mpu6050.get_temp()
+
+    return accelerometer_data, gyroscope_data, temperature
+
+# Start a while loop to continuously read the sensor data
 while True:
-    # Read gyro Z data (degrees per second)
-    gyro_data = mpu.get_gyro_data()
-    gz = gyro_data['z']
 
-    # Calculate time difference
-    current_time = time.time()
-    dt = current_time - prev_time
-    prev_time = current_time
+    # Read the sensor data
+    accelerometer_data, gyroscope_data, temperature = read_sensor_data()
 
-    # Integrate gyroscope Z to estimate angle
-    z_angle += gz * dt
+    # Print the sensor data
+    print("Accelerometer data:", accelerometer_data)
+    print("Gyroscope data:", gyroscope_data)
+    print("Temp:", temperature)
 
-    print("Z angle (yaw approx):", z_angle)
-
-    time.sleep(0.01)  # 10 ms loop
+    # Wait for 1 second
+    time.sleep(1)
