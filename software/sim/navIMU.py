@@ -24,6 +24,8 @@ pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
 shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
+picking_bay_marker_distance = 0.295  # m
+
 deliveries = []
 for picking_bay in [1, 2, 3]:
     shelf_first = random.randint(0, 5)   # first number 0–5
@@ -359,10 +361,54 @@ if __name__ == '__main__':
 
                     if aisleDistance < 1.24:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        state = 4
+                        state = 3.1
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
             
+            elif state == 3.1:
+                has_pickingbay1 = (pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0)
+                if has_pickingbay1:
+                    picking_bay1_bearing = math.degrees(pickingStationRB[0][1])
+                    kp = 0.01
+                    rotation_velocity = kp * picking_bay1_bearing
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(aisleBearing) < 0.4:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        distance_pickingbay1 = pickingStationRB[0][0]
+                        state = 3.2
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
+                else:
+                    bot.SetTargetVelocities(0.0, 0.2)
+                
+            elif state == 3.2:
+                has_pickingbay2 = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
+                if has_pickingbay2:
+                    picking_bay2_bearing = math.degrees(pickingStationRB[1][1])
+                    kp = 0.01
+                    rotation_velocity = kp * picking_bay2_bearing
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(aisleBearing) < 0.4:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        distance_pickingbay2 = pickingStationRB[1][0]
+                        state = 3.3
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
+                else:
+                    bot.SetTargetVelocities(0.0, -0.2)
+
+            elif state == 3.3:
+                cos_D = (picking_bay_marker_distance**2 + distance_pickingbay2**2 - distance_pickingbay1**2) / (2 * distance_pickingbay2 * picking_bay_marker_distance)
+    
+                # Numerical stability check (rounding errors may push value slightly out of [-1, 1])
+                cos_D = max(-1, min(1, cos_D))
+                
+                # Return angle in radians
+                angleD = math.acos(cos_D)
+                currentIMU = bot.robotPose[5]
+                aisleIMU = currentIMU - angleD - np.pi/2
+                state = 5
+
             # ------------------ STATE 4: Turn to Aisle Orientation ------------------------------
             elif state == 4:
                 has_row2 = (rowMarkerRB and rowMarkerRB[1] is not None and len(rowMarkerRB[1]) > 0)
@@ -373,7 +419,7 @@ if __name__ == '__main__':
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
                     if abs(aisleBearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
-                        aisleIMU = bot.robotPose[5]
+                        aisleIMU = bot.robotPose[5] # radians
                         state = 5
                     else:
                         bot.SetTargetVelocities(0.0, rotation_velocity)
