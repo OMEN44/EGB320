@@ -24,7 +24,7 @@ pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
 shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
-picking_bay_marker_distance = 0.295  # m
+picking_bay_marker_distance = 0.29  # m
 
 deliveries = []
 for picking_bay in [1, 2, 3]:
@@ -372,7 +372,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * picking_bay1_bearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(aisleBearing) < 0.4:
+                    if abs(aisleBearing) < 0.3:
                         bot.SetTargetVelocities(0.0, 0.0)
                         distance_pickingbay1 = pickingStationRB[0][0]
                         state = 3.2
@@ -388,7 +388,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * picking_bay2_bearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(aisleBearing) < 0.4:
+                    if abs(aisleBearing) < 0.3:
                         bot.SetTargetVelocities(0.0, 0.0)
                         distance_pickingbay2 = pickingStationRB[1][0]
                         state = 3.3
@@ -438,7 +438,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):  # close enough to target
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     forward_time = time.time()
                     state = 5.5
@@ -608,7 +608,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):  # close enough to target
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 14
                 else:
@@ -654,7 +654,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 16
                 else:
@@ -705,7 +705,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 18
                 else:
@@ -757,7 +757,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 22
                 else:
@@ -859,7 +859,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):    
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     if (distance < 0.5):
                         state = 22
                     else:
@@ -878,7 +878,7 @@ if __name__ == '__main__':
                 rotation_velocity = kp * e_theta
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-                if abs(e_theta) < np.radians(1):
+                if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 124
                 else:
