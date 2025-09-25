@@ -57,7 +57,7 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
         outputFrame = cv2.circle(outputFrame, (int(clusterCenter[0][0]), int(clusterCenter[0][1])), 5, (0, 0, 255), -1)
         outputFrame = cv2.putText(outputFrame, f'{clusterCenter[1]}: {np.round(clusterCenter[2])}px', (int(clusterCenter[0][0]) - 5, int(clusterCenter[0][1]) + 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        return [outputFrame, [getPoi('isleMarkers', clusterCenter[1], 7, clusterCenter[2], clusterCenter[0][0])]]
+        return [outputFrame, [getPoi('isleMarkers', clusterCenter[1], 7, clusterCenter[2], clusterCenter[0][0], self.calibration['new_k'][0,0])]]
     return [outputFrame, []]
 
 def findPickingStation(self, hsvFrame, outputFrame):
@@ -135,6 +135,6 @@ def findPickingStation(self, hsvFrame, outputFrame):
         cv2.circle(outputFrame, (int(cluster[0][0]), int(cluster[0][1])), 5, (0, 0, 255), -1)
         cv2.putText(outputFrame, f'{cluster[1]}', (int(cluster[0][0]) - 5, int(cluster[0][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        message.append(getPoi('pickingStation', cluster[1], 5, cluster[2], cluster[0][0]))
+        message.append(getPoi('pickingStation', cluster[1], 5, cluster[2], cluster[0][0], self.calibration['new_k'][0,0]))
 
     return [outputFrame, message]

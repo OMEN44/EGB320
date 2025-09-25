@@ -12,10 +12,6 @@ import numpy as np
 
 import cv2
 
-
-WIDTH = 640
-HEIGHT = 480
-
 class Vision(Node):
     def __init__(self):
         super().__init__('vision_node')
@@ -30,8 +26,8 @@ class Vision(Node):
         # shelves
         # self.pipeline = ["pickingStation", "isleMarkers", "items", "colourMask", "shelves", "obstacles"]
         # self.pipeline = ["shelves", "isleMarkers", "items", "colourMask", ""]
-        # self.pipeline = ["items", "colourMask", "shelves"]
-        self.pipeline = ["test", "colourMask"]
+        self.pipeline = ["items", "colourMask", "pickingStation"]
+        # self.pipeline = ["test", "colourMask"]
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)
