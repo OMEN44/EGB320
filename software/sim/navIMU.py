@@ -507,9 +507,12 @@ if __name__ == '__main__':
                     omega = max(min(omega, 0.3), -0.3)
 
                     # Forward speed scales with alignment
-                    v_max = 0.12
+                    v_max = 0.08
                     sigma = np.radians(30)
                     v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
+
+                    v_min = 0.03
+                    v = max(v, v_min)
 
                     # Optional stop condition
                     target_distance = pickingBayWallDistance
