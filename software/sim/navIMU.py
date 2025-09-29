@@ -92,6 +92,18 @@ def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg
     U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
     return U_att
 
+def attractiveFieldBearing(target_bearing, phi=np.linspace(-np.pi, np.pi, 360), gain=1.0):
+    """
+    Returns an attractive field vector pointing along target_bearing.
+    Purely directional (no distance info required).
+    """
+    U_att = np.zeros_like(phi)
+    # small angular window to avoid numerical flatness
+    window = np.radians(30)  # ±30 deg influence
+    mask = (phi >= target_bearing - window) & (phi <= target_bearing + window)
+    U_att[mask] = gain * np.cos(phi[mask] - target_bearing)  # max at target_bearing
+    return U_att
+
 def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
     # Sensor-view slide uses subtraction (Goal - Obstacles)
     U_total = U_att - U_rep
@@ -179,6 +191,7 @@ if __name__ == '__main__':
         print("Yellow - Moving to picking station or transporting item to target bay")
 
         while True:
+            print(state)
             # print(state)
             bot.UpdateObjectPositions()
 
@@ -451,25 +464,65 @@ if __name__ == '__main__':
 
 
             # ------------------ STATE 6: Drive to wall until certain distance ------------------------------
+            # elif state == 6:
+            #     target_distance = pickingBayWallDistance 
+            #     error = distance - target_distance
+
+            #     # proportional control
+            #     kp = 0.5   # tune as needed
+            #     v = kp * error
+
+            #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
+            #     v = max(min(v, 0.12), 0.03)  
+
+            #     bot.SetTargetVelocities(v, 0.0)
+            #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+
+            #     # stop when within ±1 cm of 0.45 m
+            #     if abs(error) <= 0.02:
+            #         bot.SetTargetVelocities(0.0, 0.0)
+            #         state = 7
+
             elif state == 6:
-                target_distance = pickingBayWallDistance 
-                error = distance - target_distance
+                # --- 1) Desired heading ---
+                target_heading = aisleIMU+math.pi/2  # fixed IMU reference for “straight ahead”
 
-                # proportional control
-                kp = 0.5   # tune as needed
-                v = kp * error
+                # --- 2) Obstacles ---
+                all_obstacles = []
+                for group in (obstaclesRB, pickingStationRB, shelfRB):
+                    if group:
+                        all_obstacles.extend(group)
 
-                # clamp velocity so it doesn’t crawl too slowly or rush too fast
-                v = max(min(v, 0.12), 0.03)  
+                U_rep = repulsiveField(all_obstacles)
+                U_att = attractiveFieldBearing(target_heading)
+                best_bearing = bestBearing(U_att, U_rep)
 
-                bot.SetTargetVelocities(v, 0.0)
-                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                if best_bearing is not None:
+                    current_heading = bot.robotPose[5]
+                    e_theta = angle_wrap(best_bearing - current_heading)
 
-                # stop when within ±1 cm of 0.45 m
-                if abs(error) <= 0.02:
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    state = 7
+                    # Angular velocity control (IMU)
+                    k_omega = 0.5
+                    omega = k_omega * e_theta
+                    omega = max(min(omega, 0.3), -0.3)
 
+                    # Forward speed scales with alignment
+                    v_max = 0.12
+                    sigma = np.radians(30)
+                    v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
+
+                    # Optional stop condition
+                    target_distance = pickingBayWallDistance
+                    error = distance - target_distance
+                    if (abs(error) <= 0.02):
+                        v = 0.0
+                        omega = 0.0
+                        state = 7
+
+                    bot.SetTargetVelocities(v, omega)
+                else:
+                    # fallback if no valid bearing
+                    bot.SetTargetVelocities(0.0, 0.15)
 
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
