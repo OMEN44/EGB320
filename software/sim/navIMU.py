@@ -440,7 +440,6 @@ if __name__ == '__main__':
 
                 if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                     bot.SetTargetVelocities(0.0, 0.0)
-                    forward_time = time.time()
                     state = 5.5
                 else:
                     bot.SetTargetVelocities(0.0, rotation_velocity)
@@ -470,6 +469,7 @@ if __name__ == '__main__':
                 if abs(error) <= 0.02:
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 7
+
 
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
