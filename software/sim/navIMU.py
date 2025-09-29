@@ -524,6 +524,7 @@ if __name__ == '__main__':
                     # fallback if no valid bearing
                     bot.SetTargetVelocities(0.0, 0.15)
 
+
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
             elif state == 7:
