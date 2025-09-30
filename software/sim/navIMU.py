@@ -43,6 +43,13 @@ print(deliveries)
 
 deliveryNo = 0
 
+# --- place once, outside main loop ---
+previous_best_bearing = None
+previous_omega = 0.0
+previous_e_theta = 0.0
+previous_time = time.time()
+
+
 def getMeasurements(deliveries, deliveryNo):
     pickingBay, shelf = deliveries[deliveryNo]
     pickingBayArrayIndex = pickingBay - 1
@@ -92,18 +99,21 @@ def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg
     U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
     return U_att
 
-def attractiveFieldBearing(target_bearing, phi=np.linspace(-np.pi, np.pi, 360), gain=1.0):
+def attractiveFieldPoint(goal_point, phi=np.linspace(-np.pi, np.pi, 360), gain=1.0, sigma=np.radians(20)):
     """
     Returns an attractive field vector pointing along target_bearing.
     Purely directional (no distance info required).
     """
-    U_att = np.zeros_like(phi)
-    # small angular window to avoid numerical flatness
-    window = np.radians(30)  # ±30 deg influence
-    mask = (phi >= target_bearing - window) & (phi <= target_bearing + window)
-    U_att[mask] = gain * np.cos(phi[mask] - target_bearing)  # max at target_bearing
-    return U_att
+    if goal_point is None or len(goal_point) < 2:
+        return np.zeros_like(phi)
 
+    gx, gy = goal_point
+    goal_bearing = math.atan2(gy, gx)
+
+    # Gaussian bump around goal bearing
+    U_att = gain * np.exp(-((phi - goal_bearing) ** 2) / (2 * sigma ** 2))
+
+    return U_att
 def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
     # Sensor-view slide uses subtraction (Goal - Obstacles)
     U_total = U_att - U_rep
@@ -171,7 +181,7 @@ robotParameters.sync = False
 # ---------------------------
 if __name__ == '__main__':
     try:
-        state = -1
+        state = -2
         print("Press Ctrl+C to stop the simulation\n")
         print("Connecting to CoppeliaSim...")
 
@@ -207,27 +217,92 @@ if __name__ == '__main__':
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
 
+            if state == -2:
+                startIMU = bot.robotPose[5]
+                state = -1
+            
             # ------------------ STATE -1: Turn until shelf is not seen ------------------------------
-            if state == -1:
-                
+            elif state == -1:
                 sees_shelf = shelfRB and any(row is not None for row in shelfRB)
+                sees_rowMarker = rowMarkerRB is not None and len(rowMarkerRB) > 0
                 sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
 
-                if sees_picking_bay:
-                    state = 0  # Go straight to picking station state
-                    bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
-                    # print("Picking bay spotted, skipping to state 0")
+                bot.SetTargetVelocities(0.0, -0.2)
+                currentIMU = bot.robotPose[5]
+                if abs(angle_wrap(currentIMU - startIMU)) < np.radians(350):    
+                    if sees_rowMarker:
+                        for i, row in enumerate(rowMarkerRB):
+                            if row is not None and len(row) > 0:
+                                rowIndex = i
+                                bot.SetTargetVelocities(0.0, 0.0)
+                                state = -1.1
 
-                elif sees_shelf:
-                    # Keep turning while shelf is visible
-                    bot.SetTargetVelocities(0.0, -0.2)
-                    # print("Turning... still see shelf")
+                else:      
+                    if sees_picking_bay:
+                        state = 0  # Go straight to picking station state
+                        bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
+                        # print("Picking bay spotted, skipping to state 0")
 
+                    elif sees_shelf:
+                        # Keep turning while shelf is visible
+                        bot.SetTargetVelocities(0.0, -0.2)
+                        # print("Turning... still see shelf")
+
+                    else:
+                        # No shelf, no picking bay → fallback
+                        state = -1.5
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        # print("No shelf spotted, moving to -1.5")
+
+            elif state == -1.1:
+                # bot.GetCameraImage()
+                has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
+                if has_row:
+                    rowBearing = math.degrees(rowMarkerRB[rowIndex][1])
+                    kp = 0.01
+                    rotation_velocity = kp * rowBearing
+                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    if abs(rowBearing) < 1:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        state = -1.2
+                    else:
+                        bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
-                    # No shelf, no picking bay → fallback
-                    state = -1.5
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    # print("No shelf spotted, moving to -1.5")
+                    bot.SetTargetVelocities(0.0, -0.2)
+
+            # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
+            elif state == -1.2:
+                has_row2 = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
+                if has_row2:
+                    aisleBearing = rowMarkerRB[rowIndex][1]
+                    aisleDistance = rowMarkerRB[rowIndex][0]
+                    all_obstacles = []
+                    for group in (obstaclesRB, pickingStationRB, shelfRB):
+                        if group:
+                            all_obstacles.extend(group)   # merge lists
+                    U_rep = repulsiveField(all_obstacles, phi)
+                    U_att = attractiveField(rowMarkerRB[rowIndex], phi)
+                    best_bearing = bestBearing(U_att, U_rep, phi)
+
+                    if best_bearing is not None:
+                        theta = 0.0
+                        e_theta = angle_wrap(best_bearing - theta)
+
+                        k_omega = 0.4
+                        v_max = 0.1
+                        sigma = np.radians(30)
+
+                        omega = k_omega * e_theta
+                        v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                        bot.SetTargetVelocities(v, omega)
+                    else:
+                        bot.SetTargetVelocities(0.0, 0.15)
+
+                    if aisleDistance < 1.24:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        state = 3.1
+                else:
+                    bot.SetTargetVelocities(0.0, 0.15)
 
 
             # ------------------ STATE -1.5: Turn left until shelf is seen ------------------------------
@@ -385,7 +460,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * picking_bay1_bearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(aisleBearing) < 0.3:
+                    if abs(picking_bay1_bearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
                         distance_pickingbay1 = pickingStationRB[0][0]
                         state = 3.2
@@ -401,7 +476,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * picking_bay2_bearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(aisleBearing) < 0.3:
+                    if abs(picking_bay2_bearing) < 0.4:
                         bot.SetTargetVelocities(0.0, 0.0)
                         distance_pickingbay2 = pickingStationRB[1][0]
                         state = 3.3
@@ -460,72 +535,90 @@ if __name__ == '__main__':
             # ------------------ STATE 5.5: Get next delivery instructions ------------------------------
             elif state == 5.5:
                 pickingBayArrayIndex, aisle_id, pickingBayWallDistance, aisleWallDistance, shelfMarkerDistance, shelfOrientation, aisleOrientation = getMeasurements(deliveries, deliveryNo)
+                # wall_distance = distance
+                desired_offset = pickingBayWallDistance
+                # target_x = abs(wall_distance - desired_offset)
+                # print(target_x)
+
+                # target_y = 0.0
+                # goalRB = np.array([target_x, target_y])
                 state = 6
 
 
             # ------------------ STATE 6: Drive to wall until certain distance ------------------------------
-            # elif state == 6:
-            #     target_distance = pickingBayWallDistance 
-            #     error = distance - target_distance
-
-            #     # proportional control
-            #     kp = 0.5   # tune as needed
-            #     v = kp * error
-
-            #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
-            #     v = max(min(v, 0.12), 0.03)  
-
-            #     bot.SetTargetVelocities(v, 0.0)
-            #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-
-            #     # stop when within ±1 cm of 0.45 m
-            #     if abs(error) <= 0.02:
-            #         bot.SetTargetVelocities(0.0, 0.0)
-            #         state = 7
-
             elif state == 6:
-                # --- 1) Desired heading ---
-                target_heading = aisleIMU+math.pi/2  # fixed IMU reference for “straight ahead”
+                target_distance = pickingBayWallDistance 
+                error = distance - target_distance
 
-                # --- 2) Obstacles ---
-                all_obstacles = []
-                for group in (obstaclesRB, pickingStationRB, shelfRB):
-                    if group:
-                        all_obstacles.extend(group)
+                # proportional control
+                kp = 0.5   # tune as needed
+                v = kp * error
 
-                U_rep = repulsiveField(all_obstacles)
-                U_att = attractiveFieldBearing(target_heading)
-                best_bearing = bestBearing(U_att, U_rep)
+                # clamp velocity so it doesn’t crawl too slowly or rush too fast
+                v = max(min(v, 0.12), 0.03)  
 
-                if best_bearing is not None:
-                    current_heading = bot.robotPose[5]
-                    e_theta = angle_wrap(best_bearing - current_heading)
+                bot.SetTargetVelocities(v, 0.0)
+                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-                    # Angular velocity control (IMU)
-                    k_omega = 0.5
-                    omega = k_omega * e_theta
-                    omega = max(min(omega, 0.3), -0.3)
+                # stop when within ±1 cm of 0.45 m
+                if abs(error) <= 0.02:
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 7
 
-                    # Forward speed scales with alignment
-                    v_max = 0.08
-                    sigma = np.radians(30)
-                    v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
+            # elif state == 6:  # Example: moving towards some goal with APF
+            #     wall_distance = distance
+            #     target_x = wall_distance - desired_offset
+            #     goalRB = np.array([target_x, 0.0])
+            #     print(target_x)
 
-                    v_min = 0.03
-                    v = max(v, v_min)
+            #     target_y = 0.0
+            #     goalRB = np.array([target_x, target_y])
+            #     has_goal = (goalRB is not None and len(goalRB) > 0)
+            #     if has_goal:
+            #         # Merge all relevant obstacles
+            #         all_obstacles = []
+            #         for group in (obstaclesRB, shelfRB):
+            #             if group:
+            #                 all_obstacles.extend(group)
 
-                    # Optional stop condition
-                    target_distance = pickingBayWallDistance
-                    error = distance - target_distance
-                    if (abs(error) <= 0.02):
-                        v = 0.0
-                        omega = 0.0
-                        state = 7
+            #         # Compute APF components
+            #         U_rep = repulsiveField(all_obstacles, phi)
+            #         U_att = attractiveFieldPoint(goalRB, phi)
 
-                    bot.SetTargetVelocities(v, omega)
-                else:
-                    # fallback if no valid bearing
-                    bot.SetTargetVelocities(0.0, 0.15)
+            #         # Pick best bearing from APF result
+            #         best_bearing = bestBearing(U_att, U_rep, phi)
+
+            #         if best_bearing is not None:
+            #             theta = 0.0   # robot heading, adjust if you have actual odometry
+            #             # theta = bot.robotPose[5]
+            #             e_theta = angle_wrap(best_bearing - theta)
+
+            #             # Tunable parameters
+            #             k_omega = 0.4
+            #             v_max = 0.1
+            #             sigma = np.radians(30)
+
+            #             # Convert error to angular & linear velocity
+            #             omega = k_omega * e_theta
+            #             v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+
+            #             bot.SetTargetVelocities(v, omega)
+            #         else:
+            #             # No clear best bearing → rotate slowly to search
+            #             bot.SetTargetVelocities(0.0, 0.15)
+
+            #         # Arrival condition – tweak threshold as needed
+            #         error = wall_distance - desired_offset
+            #         if abs(error) <= 0.02:  # stop within ±2 cm
+            #             bot.SetTargetVelocities(0.0, 0.0)
+            #             state = 7
+
+            #     else:
+            #         # No goal detected, rotate to search
+            #         bot.SetTargetVelocities(0.0, 0.15)
+
+
+
 
 
                 
