@@ -181,7 +181,7 @@ robotParameters.sync = False
 # ---------------------------
 if __name__ == '__main__':
     try:
-        state = -2
+        state = -0.1
         print("Press Ctrl+C to stop the simulation\n")
         print("Connecting to CoppeliaSim...")
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
 
-            if state == -2:
+            if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1
             

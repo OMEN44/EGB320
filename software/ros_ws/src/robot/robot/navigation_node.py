@@ -7,6 +7,8 @@ from std_msgs.msg import Bool
 from robot_interfaces.msg import PoiGroup
 import time
 
+import robot.navigation.apf as apf
+
 import numpy as np
 import math
 
@@ -50,9 +52,10 @@ class Navigation(Node):
 
         self.timer_ = self.create_timer(0.001, self.state_machine)
 
-        self.objects = []
+        self.obstacles = []
         self.aisle_markers = []
         self.shelves = []
+        self.picking_Station = []
 
         self.pois = []
 
@@ -60,47 +63,7 @@ class Navigation(Node):
 
         self.arm_status = False  
 
-    # ---------------------------
-    # Potential fields
-    # ---------------------------
-    def repulsiveField(self, obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
-        U_rep = np.zeros_like(phi)
-        if not obstacleList:
-            return U_rep
-        
-        for obs in obstacleList:
-            if obs is None or len(obs) != 2:
-                continue
-            obs_distance, obs_bearing = obs
-            if obs_distance <= 0 or abs(obs_bearing) > np.pi/2:
-                continue
-
-            dphi = np.arcsin((obstacle_width/2) / obs_distance) if obs_distance > (obstacle_width/2) else np.pi/2
-            mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-            U_rep[mask] = np.maximum(U_rep[mask], (1.0 / obs_distance))
-        return U_rep
-
-    def attractiveField(self,target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
-        if target is None:
-            return np.zeros_like(phi)
-        target_distance, target_bearing = target
-        slope = target_distance / np.radians(max_bearing_deg)
-        U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
-        return U_att
-
-    def bestBearing(self, U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
-        # Sensor-view slide uses subtraction (Goal - Obstacles)
-        U_total = U_att - U_rep
-        if not np.isfinite(U_total).all():
-            return None
-        if np.allclose(U_total, 0.0):
-            return None
-        best_index = np.argmax(U_total)
-        return phi[best_index]   # radians
-
-    def angle_wrap(self, angle):
-        """Wrap angle to [-pi, pi]."""
-        return (angle + np.pi) % (2*np.pi) - np.pi
+        self.zone_dist_aisle_marker = 1.24
 
     # --------------------------- Get distance measurements ---------------------------
     def get_measurements(self, shelfID):
@@ -162,6 +125,121 @@ class Navigation(Node):
             self.aisle_index, self.shelfMarkerDistance, self.shelfOrientation = self.get_measurements(shelfID)
             self.get_logger().info(f"Target shelf {shelfID}, aisle {self.aisle_index+1}")
             self.state = 'DRIVE_INTO_AISLE'
+            
+        elif self.state == 'TURN_CALIBRATION':
+            calibration_turn_speed = 0.14
+            self.send_vision_data("isleMarkers,shelves,pickingStation", "")
+            self.aisle_markers = self.filter_poi("isleMarkers")
+            self.shelves = self.filter_poi("shelf")
+            self.picking_Station = self.filter_poi("pickingStation")
+            if len(self.aisle_markers) != 0:
+                self.publish_velocity(0.0, 0.0)
+                for i, row in self.aisle_markers:
+                    if row is not None and len(row) > 0:
+                        row_index = i
+                self.state = 'CALIBRATION_AISLE_MARKER'
+            if len(self.picking_station) != 0:
+                self.publish_velocity(0.0, 0.0)
+                self.state = 'CALIBRATION_PICKING_STATION'
+            elif len(self.shelves) != 0:
+                self.publish_velocity(0.0, 0.0)
+                self.state = 'CALIBRATION_SHELF'
+            else:
+                self.publish_velocity(0.0, calibration_turn_speed)
+
+        elif self.state == 'CALIBRATION_AISLE_MARKER':
+            self.send_vision_data("isleMarkers,shelves,obstacles", "")
+            self.obstacles = self.filter_poi("obstacle")
+            self.aisle_markers = self.filter_poi("isleMarkers")
+            self.shelves = self.filter_poi("shelf")
+            if len(self.aisle_markers) == 0:
+                return
+            distance_to_marker = self.aisle_markers[row_index][2]
+            marker_bearing = self.aisle_markers[row_index][3]
+            all_obstacles = []
+            for group in (self.obstacles, self.shelves):
+                all_obstacles.extend([(obj.distance, obj.bearing) for obj in group])
+            error = distance_to_marker - self.zone_dist_aisle_marker
+            U_rep = apf.repulsiveField(all_obstacles, self.phi)
+            U_att = apf.attractiveField((distance_to_marker, marker_bearing), self.phi)
+            best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+            if best_bearing is not None:
+                theta = 0.0  # if you have a robot heading API, replace this with it
+                e_theta = apf.angle_wrap(best_bearing - theta)
+                k_omega = 0.3
+                v_max = 0.1
+                sigma = np.radians(30)
+                omega = k_omega * e_theta
+                v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                self.publish_velocity(v, omega)
+            else:
+                # No valid direction -> gentle spin to search
+                self.publish_velocity(0.0, 0.15)
+            if abs(error) < 0.01:
+                self.publish_velocity(0.0, 0.0)
+                self.state = 'FIND_PICKING_BAY1'
+                self.get_logger().info("Front of aisle...")
+
+        elif self.state == 'FIND_PICKING_BAY1':
+            calibration_turn_speed = 0.14
+            self.send_vision_data("isleMarkers", "")
+            self.aisle_markers = self.filter_poi("isleMarkers")
+            if len(self.aisle_markers) == 0:
+                self.publish_velocity(0.0, calibration_turn_speed)
+            else:
+                if self.aisle_markers[0] is not None:
+                    self.state == 'GET_PICKING_BAY1_DIST'
+                else:
+                    self.publish_velocity(0.0, calibration_turn_speed)
+        
+        elif self.state == 'GET_PICKING_BAY1_DIST':
+            self.send_vision_data("pickingStation", "")
+            self.picking_Station = self.filter_poi("pickingStation")
+            picking_station_bearing = math.degrees(self.picking_Station[0][1])
+            kp = 0.01
+            rotation_velocity = kp * picking_station_bearing 
+            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+            if abs(picking_station_bearing) < 0.5:
+                distance_picking_bay_1 = self.picking_Station[0][0]
+                self.state = 'FIND_PICKING_BAY2'
+
+        elif self.state == 'FIND_PICKING_BAY2':
+            calibration_turn_speed = 0.14
+            self.send_vision_data("isleMarkers", "")
+            self.aisle_markers = self.filter_poi("isleMarkers")
+            if len(self.aisle_markers) == 0:
+                self.publish_velocity(0.0, calibration_turn_speed)
+            else:
+                if self.aisle_markers[1] is not None:
+                    self.state == 'GET_PICKING_BAY1_DIST'
+                else:
+                    self.publish_velocity(0.0, calibration_turn_speed)
+
+        elif self.state == 'GET_PICKING_BAY2_DIST':
+            self.send_vision_data("pickingStation", "")
+            self.picking_Station = self.filter_poi("pickingStation")
+            picking_station_bearing = math.degrees(self.picking_Station[1][1])
+            kp = 0.01
+            rotation_velocity = kp * picking_station_bearing 
+            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+            if abs(picking_station_bearing) < 0.5:
+                distance_picking_bay_2 = self.picking_Station[1][0]
+                self.state = 'CALCULATE_AISLE_IMU'
+
+        elif self.state == 'CALCULATE_AISLE_IMU':
+            picking_bay_marker_distance = 0.29
+            cos_D = (picking_bay_marker_distance**2 + distance_picking_bay_2**2 - distance_picking_bay_1**2) / (2 * distance_picking_bay_2 * distance_picking_bay_1)
+    
+            # Numerical stability check (rounding errors may push value slightly out of [-1, 1])
+            cos_D = max(-1, min(1, cos_D))
+            
+            # Return angle in radians
+            angleD = math.acos(cos_D)
+            # currentIMU = bot.robotPose[5]
+            # aisleIMU = currentIMU - angleD - np.pi/2
+                      
+
+
 
         elif self.state == 'DRIVE_INTO_AISLE':
             self.send_vision_data("isleMarkers,shelves", "")
@@ -179,12 +257,12 @@ class Navigation(Node):
             for group in (self.objects, self.shelves):
                 all_obstacles.extend([(obj.distance, obj.bearing) for obj in group])
             error = distance_to_marker - self.shelfMarkerDistance
-            U_rep = self.repulsiveField(all_obstacles, self.phi)
-            U_att = self.attractiveField((distance_to_marker, marker_bearing), self.phi)
-            best_bearing = self.bestBearing(U_att, U_rep, self.phi)
+            U_rep = apf.repulsiveField(all_obstacles, self.phi)
+            U_att = apf.attractiveField((distance_to_marker, marker_bearing), self.phi)
+            best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
             if best_bearing is not None:
                 theta = 0.0  # if you have a robot heading API, replace this with it
-                e_theta = self.angle_wrap(best_bearing - theta)
+                e_theta = apf.angle_wrap(best_bearing - theta)
                 k_omega = 0.3
                 v_max = 0.1
                 sigma = np.radians(30)
