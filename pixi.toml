@@ -8,6 +8,10 @@ version = "0.1.0"
 build = "colcon build --symlink-install"
 bridge = "ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
 vision = "ros2 run robot vision"
+navigation = "ros2 run robot navigation"
+collection  = "ros2 run robot collection"
+mobility = "ros2 run robot mobility"
+
 
 [activation]
 scripts = ["install/setup.sh"]
