@@ -221,7 +221,7 @@ if __name__ == '__main__':
                 startIMU = bot.robotPose[5]
                 state = -1
             
-            # ------------------ STATE -1: Turn until shelf is not seen ------------------------------
+            # ------------------ STATE -1: Calibration depending on what robot can see ------------------------------
             elif state == -1:
                 sees_shelf = shelfRB and any(row is not None for row in shelfRB)
                 sees_rowMarker = rowMarkerRB is not None and len(rowMarkerRB) > 0
@@ -254,6 +254,7 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, 0.0)
                         # print("No shelf spotted, moving to -1.5")
 
+            # ------------------ STATE -1.1: Robot sees a row marker ------------# 
             elif state == -1.1:
                 # bot.GetCameraImage()
                 has_row = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
@@ -270,7 +271,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
 
-            # ------------------ STATE 3: Drive toward Aisle Marker 2 with fields ------------
+            # ------------------ STATE -1.2: Drive toward Aisle Marker with fields ------------
             elif state == -1.2:
                 has_row2 = (rowMarkerRB and rowMarkerRB[rowIndex] is not None and len(rowMarkerRB[rowIndex]) > 0)
                 if has_row2:
@@ -453,6 +454,8 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, 0.15)
             
+            # ------------------ STATE 3.1: Get distance of picking bay 1 ------------
+
             elif state == 3.1:
                 has_pickingbay1 = (pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0)
                 if has_pickingbay1:
@@ -468,7 +471,8 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(0.0, rotation_velocity)
                 else:
                     bot.SetTargetVelocities(0.0, 0.2)
-                
+
+            # ------------------ STATE 3.2: Get distance of picking bay 2 ------------
             elif state == 3.2:
                 has_pickingbay2 = (pickingStationRB and pickingStationRB[1] is not None and len(pickingStationRB[1]) > 0)
                 if has_pickingbay2:
@@ -485,6 +489,7 @@ if __name__ == '__main__':
                 else:
                     bot.SetTargetVelocities(0.0, -0.2)
 
+            # ------------------ STATE 3.3: Calculate IMU value towards aisle markers ------------
             elif state == 3.3:
                 cos_D = (picking_bay_marker_distance**2 + distance_pickingbay2**2 - distance_pickingbay1**2) / (2 * distance_pickingbay2 * picking_bay_marker_distance)
     
@@ -564,63 +569,6 @@ if __name__ == '__main__':
                 if abs(error) <= 0.02:
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 7
-
-            # elif state == 6:  # Example: moving towards some goal with APF
-            #     wall_distance = distance
-            #     target_x = wall_distance - desired_offset
-            #     goalRB = np.array([target_x, 0.0])
-            #     print(target_x)
-
-            #     target_y = 0.0
-            #     goalRB = np.array([target_x, target_y])
-            #     has_goal = (goalRB is not None and len(goalRB) > 0)
-            #     if has_goal:
-            #         # Merge all relevant obstacles
-            #         all_obstacles = []
-            #         for group in (obstaclesRB, shelfRB):
-            #             if group:
-            #                 all_obstacles.extend(group)
-
-            #         # Compute APF components
-            #         U_rep = repulsiveField(all_obstacles, phi)
-            #         U_att = attractiveFieldPoint(goalRB, phi)
-
-            #         # Pick best bearing from APF result
-            #         best_bearing = bestBearing(U_att, U_rep, phi)
-
-            #         if best_bearing is not None:
-            #             theta = 0.0   # robot heading, adjust if you have actual odometry
-            #             # theta = bot.robotPose[5]
-            #             e_theta = angle_wrap(best_bearing - theta)
-
-            #             # Tunable parameters
-            #             k_omega = 0.4
-            #             v_max = 0.1
-            #             sigma = np.radians(30)
-
-            #             # Convert error to angular & linear velocity
-            #             omega = k_omega * e_theta
-            #             v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-
-            #             bot.SetTargetVelocities(v, omega)
-            #         else:
-            #             # No clear best bearing → rotate slowly to search
-            #             bot.SetTargetVelocities(0.0, 0.15)
-
-            #         # Arrival condition – tweak threshold as needed
-            #         error = wall_distance - desired_offset
-            #         if abs(error) <= 0.02:  # stop within ±2 cm
-            #             bot.SetTargetVelocities(0.0, 0.0)
-            #             state = 7
-
-            #     else:
-            #         # No goal detected, rotate to search
-            #         bot.SetTargetVelocities(0.0, 0.15)
-
-
-
-
-
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
             elif state == 7:
