@@ -8,6 +8,7 @@ from robot_interfaces.msg import PoiGroup
 import time
 
 import robot.navigation.apf as apf
+import robot.navigation.imu as imu
 
 import numpy as np
 import math
@@ -83,7 +84,7 @@ class Navigation(Node):
         target_item_msg = String()
         target_item_msg.data = target_item_data
         self.target_item_pub.publish(target_item_msg)
-        self.get_logger().info("Sent pipeline and target item data to vision...")
+        # self.get_logger().info("Sent pipeline and target item data to vision...")
 
     # --------------------------- Robot movement and actions publisher ---------------------------
     def publish_velocity(self, forward_vel, angular_vel):
@@ -91,7 +92,9 @@ class Navigation(Node):
         twist_msg.linear.x = forward_vel
         twist_msg.angular.z = angular_vel
         self.velocities_pub.publish(twist_msg)
-        self.get_logger().info("Twist message sent to mobility...")
+        # self.get_logger().info(str(forward_vel))
+        # self.get_logger().info(str(angular_vel))
+        # self.get_logger().info("Twist message sent to mobility...")
 
     def publish_collection(self, collection_command):
         # Placeholder: implement gripper or collection action
@@ -120,11 +123,13 @@ class Navigation(Node):
 
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
-        print(self.state)
+        self.get_logger().info(self.state)
+        
+        # print(self.state)
         if self.state == 'START':
             self.aisle_index, self.shelfMarkerDistance, self.shelfOrientation = self.get_measurements(shelfID)
             self.get_logger().info(f"Target shelf {shelfID}, aisle {self.aisle_index+1}")
-            self.state = 'DRIVE_INTO_AISLE'
+            self.state = 'TURN_CALIBRATION'
             
         elif self.state == 'TURN_CALIBRATION':
             calibration_turn_speed = 0.14
@@ -132,13 +137,17 @@ class Navigation(Node):
             self.aisle_markers = self.filter_poi("isleMarkers")
             self.shelves = self.filter_poi("shelf")
             self.picking_Station = self.filter_poi("pickingStation")
+
+            # self.get_logger().info(str(len(self.aisle_markers)))
+            # self.get_logger().info(str(len(self.picking_Station)))
+
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
                 for i, row in self.aisle_markers:
                     if row is not None and len(row) > 0:
                         row_index = i
                 self.state = 'CALIBRATION_AISLE_MARKER'
-            if len(self.picking_station) != 0:
+            if len(self.picking_Station) != 0:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'CALIBRATION_PICKING_STATION'
             elif len(self.shelves) != 0:
@@ -235,8 +244,8 @@ class Navigation(Node):
             
             # Return angle in radians
             angleD = math.acos(cos_D)
-            # currentIMU = bot.robotPose[5]
-            # aisleIMU = currentIMU - angleD - np.pi/2
+            currentIMU = imu.getYaw()
+            aisleIMU = currentIMU - angleD - np.pi/2
                       
 
 
