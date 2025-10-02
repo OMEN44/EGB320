@@ -201,7 +201,7 @@ if __name__ == '__main__':
         print("Yellow - Moving to picking station or transporting item to target bay")
 
         while True:
-            print(state)
+            # print(state)
             # print(state)
             # print(state)
             bot.UpdateObjectPositions()
@@ -218,6 +218,7 @@ if __name__ == '__main__':
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
             # print(packingStationRB)
+            print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1
@@ -552,25 +553,69 @@ if __name__ == '__main__':
 
 
             # #------------------ STATE 6: Drive to wall until certain distance ------------------------------
-            elif state == 6:
-                # print(packingStationRB)
-                target_distance = pickingBayWallDistance 
-                error = distance - target_distance
+            # elif state == 6:
+            #     # print(packingStationRB)
+            #     target_distance = pickingBayWallDistance 
+            #     error = distance - target_distance
 
-                # proportional control
-                kp = 0.5   # tune as needed
-                v = kp * error
+            #     # proportional control
+            #     kp = 0.5   # tune as needed
+            #     v = kp * error
 
-                # clamp velocity so it doesn’t crawl too slowly or rush too fast
-                v = max(min(v, 0.12), 0.03)  
+            #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
+            #     v = max(min(v, 0.12), 0.03)  
 
-                bot.SetTargetVelocities(v, 0.0)
-                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+            #     bot.SetTargetVelocities(v, 0.0)
+            #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-                # stop when within ±1 cm of 0.45 m
-                if abs(error) <= 0.02:
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    state = 7
+            #     # stop when within ±1 cm of 0.45 m
+            #     if abs(error) <= 0.02:
+            #         bot.SetTargetVelocities(0.0, 0.0)
+            #         state = 7
+
+            elif state == 6:  # DRIVE_TO_FRONT_OF_PICKING_STATION_SIM
+                # --- 1. Read sensors ---
+                current_distance = distance              # front distance sensor
+                imu_yaw = bot.robotPose[5]               # robot IMU yaw
+                all_obstacles = []
+
+                for group in (obstaclesRB, shelfRB):
+                    if group:
+                        all_obstacles.extend(group)
+
+                # --- 2. Attractive goal (towards wall) ---
+                # Since the wall itself isn’t seen, just treat it as "straight ahead at large distance"
+                # Distance sensor will stop us when close enough
+                goal_range = 2.0                         # pretend the wall is 2m ahead (any big value works)
+                goal_bearing = imu_yaw                   # "straight ahead"
+                goal = [goal_range, goal_bearing]
+
+                # --- 3. APF: attractive + repulsive ---
+                U_att = attractiveField(goal, phi)
+                U_rep = repulsiveField(all_obstacles, phi)
+                best_bearing = bestBearing(U_att, U_rep, phi)
+
+                # --- 4. Control law ---
+                if best_bearing is not None:
+                    e_theta = angle_wrap(best_bearing - imu_yaw)
+                    k_omega = 5
+                    v_max = 0.12
+                    sigma = np.radians(30)
+
+                    omega = k_omega * e_theta
+                    v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
+                    v = max(v, 0.03)   # don’t stall out
+                    bot.SetTargetVelocities(v, omega)
+                else:
+                    # If APF can’t find a direction, just spin
+                    bot.SetTargetVelocities(0.0, 0.15)
+
+                # --- 5. Stop condition at wall ---
+                # target_distance = 0.1
+                # if current_distance <= target_distance + 0.02:  # reached stopping distance
+                #     bot.SetTargetVelocities(0.0, 0.0)
+                #     state = 7   # move on to next behaviour
+
 
             # elif state == 6:  # DRIVE_TO_FRONT_OF_PICKING_STATION_SIM
             #     # --- 1. Read sensors ---
@@ -918,26 +963,26 @@ if __name__ == '__main__':
                     state = 221
                 elif aisle_id == "2":
                     return_index = 0
-                    state = 221
+                    state = 222
                 else:
                     state = 23
 
-            # ------------------ STATE 221: Turn to face picking station (if aisle 1 delivery) ------------------------------
-            elif state == 221:
-                # bot.GetCameraImage()
-                has_row2 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
-                if has_row2:
-                    stationBearing = math.degrees(pickingStationRB[return_index][1])
-                    kp = 0.01
-                    rotation_velocity = kp * stationBearing
-                    rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(stationBearing) < 10:
-                        bot.SetTargetVelocities(0.0, 0.0)
-                        state = 222
-                    else:
-                        bot.SetTargetVelocities(0.0, rotation_velocity)
-                else:
-                    bot.SetTargetVelocities(0.0, -0.2)
+            # # ------------------ STATE 221: Turn to face picking station (if aisle 1 delivery) ------------------------------
+            # elif state == 221:
+            #     # bot.GetCameraImage()
+            #     has_row2 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
+            #     if has_row2:
+            #         stationBearing = math.degrees(pickingStationRB[return_index][1])
+            #         kp = 0.01
+            #         rotation_velocity = kp * stationBearing
+            #         rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+            #         if abs(stationBearing) < 10:
+            #             bot.SetTargetVelocities(0.0, 0.0)
+            #             state = 222
+            #         else:
+            #             bot.SetTargetVelocities(0.0, rotation_velocity)
+            #     else:
+            #         bot.SetTargetVelocities(0.0, -0.2)
 
             # ------------------ STATE 222: Drive toward Picking Station with fields ------------------------------
             elif state == 222:
