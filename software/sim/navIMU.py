@@ -85,12 +85,13 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         if obs_distance <= 0 or abs(obs_bearing) > np.pi/2:
             continue
 
-        dphi = np.arcsin((obstacle_width/2) / obs_distance) if obs_distance > (obstacle_width/2) else np.pi/2
+        dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi/2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
         U_rep[mask] = np.maximum(U_rep[mask], (1.0 / obs_distance))
     return U_rep
 
 
+# Attractive field towards target
 def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
     if target is None:
         return np.zeros_like(phi)
@@ -99,30 +100,16 @@ def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg
     U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
     return U_att
 
-def attractiveFieldPoint(goal_point, phi=np.linspace(-np.pi, np.pi, 360), gain=1.0, sigma=np.radians(20)):
-    """
-    Returns an attractive field vector pointing along target_bearing.
-    Purely directional (no distance info required).
-    """
-    if goal_point is None or len(goal_point) < 2:
-        return np.zeros_like(phi)
 
-    gx, gy = goal_point
-    goal_bearing = math.atan2(gy, gx)
-
-    # Gaussian bump around goal bearing
-    U_att = gain * np.exp(-((phi - goal_bearing) ** 2) / (2 * sigma ** 2))
-
-    return U_att
+# Pick the best bearing (Goal - Obstacles)
 def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
-    # Sensor-view slide uses subtraction (Goal - Obstacles)
     U_total = U_att - U_rep
     if not np.isfinite(U_total).all():
         return None
     if np.allclose(U_total, 0.0):
         return None
     best_index = np.argmax(U_total)
-    return phi[best_index]   # radians
+    return phi[best_index]  # radians
 
 
 
@@ -218,20 +205,17 @@ if __name__ == '__main__':
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
             # print(packingStationRB)
-            print(packingStationRB)
+            # print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1
             
             # ------------------ STATE -1: Calibration depending on what robot can see ------------------------------
             elif state == -1:
-                sees_shelf = shelfRB and any(row is not None for row in shelfRB)
-                sees_rowMarker = rowMarkerRB is not None and len(rowMarkerRB) > 0
-                sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
-
                 bot.SetTargetVelocities(0.0, -0.2)
                 currentIMU = bot.robotPose[5]
                 if abs(angle_wrap(currentIMU - startIMU)) < np.radians(350):    
+                    sees_rowMarker = rowMarkerRB is not None and len(rowMarkerRB) > 0
                     if sees_rowMarker:
                         for i, row in enumerate(rowMarkerRB):
                             if row is not None and len(row) > 0:
@@ -240,6 +224,8 @@ if __name__ == '__main__':
                                 state = -1.1
 
                 else:      
+                    sees_shelf = shelfRB and any(row is not None for row in shelfRB)
+                    sees_picking_bay = pickingStationRB and pickingStationRB[0] is not None and len(pickingStationRB[0]) > 0
                     if sees_picking_bay:
                         state = 0  # Go straight to picking station state
                         bot.SetTargetVelocities(0.0, 0.0)  # Stop turning immediately
@@ -265,7 +251,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * rowBearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-                    if abs(rowBearing) < 1:
+                    if abs(rowBearing) < 40:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = -1.2
                     else:
@@ -552,116 +538,26 @@ if __name__ == '__main__':
                 state = 6
 
 
-            # #------------------ STATE 6: Drive to wall until certain distance ------------------------------
-            # elif state == 6:
-            #     # print(packingStationRB)
-            #     target_distance = pickingBayWallDistance 
-            #     error = distance - target_distance
+            #------------------ STATE 6: Drive to wall until certain distance ------------------------------
+            elif state == 6:
+                # print(packingStationRB)
+                target_distance = pickingBayWallDistance 
+                error = distance - target_distance
 
-            #     # proportional control
-            #     kp = 0.5   # tune as needed
-            #     v = kp * error
+                # proportional control
+                kp = 0.5   # tune as needed
+                v = kp * error
 
-            #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
-            #     v = max(min(v, 0.12), 0.03)  
+                # clamp velocity so it doesn’t crawl too slowly or rush too fast
+                v = max(min(v, 0.12), 0.03)  
 
-            #     bot.SetTargetVelocities(v, 0.0)
-            #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                bot.SetTargetVelocities(v, 0.0)
+                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-            #     # stop when within ±1 cm of 0.45 m
-            #     if abs(error) <= 0.02:
-            #         bot.SetTargetVelocities(0.0, 0.0)
-            #         state = 7
-
-            elif state == 6:  # DRIVE_TO_FRONT_OF_PICKING_STATION_SIM
-                # --- 1. Read sensors ---
-                current_distance = distance              # front distance sensor
-                imu_yaw = bot.robotPose[5]               # robot IMU yaw
-                all_obstacles = []
-
-                for group in (obstaclesRB, shelfRB):
-                    if group:
-                        all_obstacles.extend(group)
-
-                # --- 2. Attractive goal (towards wall) ---
-                # Since the wall itself isn’t seen, just treat it as "straight ahead at large distance"
-                # Distance sensor will stop us when close enough
-                goal_range = 2.0                         # pretend the wall is 2m ahead (any big value works)
-                goal_bearing = imu_yaw                   # "straight ahead"
-                goal = [goal_range, goal_bearing]
-
-                # --- 3. APF: attractive + repulsive ---
-                U_att = attractiveField(goal, phi)
-                U_rep = repulsiveField(all_obstacles, phi)
-                best_bearing = bestBearing(U_att, U_rep, phi)
-
-                # --- 4. Control law ---
-                if best_bearing is not None:
-                    e_theta = angle_wrap(best_bearing - imu_yaw)
-                    k_omega = 5
-                    v_max = 0.12
-                    sigma = np.radians(30)
-
-                    omega = k_omega * e_theta
-                    v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
-                    v = max(v, 0.03)   # don’t stall out
-                    bot.SetTargetVelocities(v, omega)
-                else:
-                    # If APF can’t find a direction, just spin
-                    bot.SetTargetVelocities(0.0, 0.15)
-
-                # --- 5. Stop condition at wall ---
-                # target_distance = 0.1
-                # if current_distance <= target_distance + 0.02:  # reached stopping distance
-                #     bot.SetTargetVelocities(0.0, 0.0)
-                #     state = 7   # move on to next behaviour
-
-
-            # elif state == 6:  # DRIVE_TO_FRONT_OF_PICKING_STATION_SIM
-            #     # --- 1. Read sensors ---
-            #     current_distance = distance        # front distance sensor
-            #     imu_yaw = bot.robotPose[5]        # robot IMU yaw
-
-            #     all_obstacles = []
-            #     for group in (obstaclesRB, shelfRB):
-            #         if group:
-            #             all_obstacles.extend(group)
-
-            #     # --- 2. Compute goal bearing using offset x ---
-            #     if packingStationRB:
-            #         x = packingStationRB[0] * math.cos(packingStationRB[1])
-            #         bay_bearing = packingStationRB[1]  
-            #         # goal_bearing = bay_bearing + x  # x is your chosen offset
-            #         goal_bearing = bay_bearing
-            #     else:
-            #         goal_bearing = imu_yaw  # fallback straight ahead
-
-            #     # --- 3. Set APF goal ---
-            #     # goal = [packingStationRB[0], goal_bearing]  # large distance, only bearing matters
-            #     goal = [packingStationRB[0], packingStationRB[1]]
-            #     U_att = attractiveField(goal, phi)
-            #     U_rep = repulsiveField(all_obstacles, phi)
-            #     best_bearing = bestBearing(U_att, U_rep, phi)
-
-            #     # --- 4. Compute velocities ---
-            #     if best_bearing is not None:
-            #         e_theta = angle_wrap(best_bearing - imu_yaw)
-            #         k_omega = 0.4
-            #         v_max = 0.12
-            #         sigma = np.radians(30)
-
-            #         omega = k_omega * e_theta
-            #         v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
-            #         v = max(v, 0.03)
-            #         bot.SetTargetVelocities(v, omega)
-            #     else:
-            #         bot.SetTargetVelocities(0.0, 0.15)  # spin if no valid bearing
-
-            #     # --- 5. Stop at wall ---
-            #     target_distance = pickingBayWallDistance
-            #     if abs(current_distance - target_distance) <= 0.02:
-            #         bot.SetTargetVelocities(0.0, 0.0)
-            #         state = 7  # next state
+                # stop when within ±1 cm of 0.45 m
+                if abs(error) <= 0.02:
+                    bot.SetTargetVelocities(0.0, 0.0)
+                    state = 7
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
             elif state == 7:
@@ -960,7 +856,7 @@ if __name__ == '__main__':
             elif state == 22:
                 if aisle_id == "1":
                     return_index = 2
-                    state = 221
+                    state = 222
                 elif aisle_id == "2":
                     return_index = 0
                     state = 222
