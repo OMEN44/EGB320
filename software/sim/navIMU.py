@@ -203,6 +203,7 @@ if __name__ == '__main__':
         while True:
             print(state)
             # print(state)
+            # print(state)
             bot.UpdateObjectPositions()
 
             # Order here must match what GetDetectedObjects returns
@@ -216,7 +217,7 @@ if __name__ == '__main__':
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-
+            # print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1
@@ -550,8 +551,9 @@ if __name__ == '__main__':
                 state = 6
 
 
-            # ------------------ STATE 6: Drive to wall until certain distance ------------------------------
+            # #------------------ STATE 6: Drive to wall until certain distance ------------------------------
             elif state == 6:
+                # print(packingStationRB)
                 target_distance = pickingBayWallDistance 
                 error = distance - target_distance
 
@@ -569,6 +571,52 @@ if __name__ == '__main__':
                 if abs(error) <= 0.02:
                     bot.SetTargetVelocities(0.0, 0.0)
                     state = 7
+
+            # elif state == 6:  # DRIVE_TO_FRONT_OF_PICKING_STATION_SIM
+            #     # --- 1. Read sensors ---
+            #     current_distance = distance        # front distance sensor
+            #     imu_yaw = bot.robotPose[5]        # robot IMU yaw
+
+            #     all_obstacles = []
+            #     for group in (obstaclesRB, shelfRB):
+            #         if group:
+            #             all_obstacles.extend(group)
+
+            #     # --- 2. Compute goal bearing using offset x ---
+            #     if packingStationRB:
+            #         x = packingStationRB[0] * math.cos(packingStationRB[1])
+            #         bay_bearing = packingStationRB[1]  
+            #         # goal_bearing = bay_bearing + x  # x is your chosen offset
+            #         goal_bearing = bay_bearing
+            #     else:
+            #         goal_bearing = imu_yaw  # fallback straight ahead
+
+            #     # --- 3. Set APF goal ---
+            #     # goal = [packingStationRB[0], goal_bearing]  # large distance, only bearing matters
+            #     goal = [packingStationRB[0], packingStationRB[1]]
+            #     U_att = attractiveField(goal, phi)
+            #     U_rep = repulsiveField(all_obstacles, phi)
+            #     best_bearing = bestBearing(U_att, U_rep, phi)
+
+            #     # --- 4. Compute velocities ---
+            #     if best_bearing is not None:
+            #         e_theta = angle_wrap(best_bearing - imu_yaw)
+            #         k_omega = 0.4
+            #         v_max = 0.12
+            #         sigma = np.radians(30)
+
+            #         omega = k_omega * e_theta
+            #         v = v_max * np.exp(-(e_theta**2)/(2*sigma**2))
+            #         v = max(v, 0.03)
+            #         bot.SetTargetVelocities(v, omega)
+            #     else:
+            #         bot.SetTargetVelocities(0.0, 0.15)  # spin if no valid bearing
+
+            #     # --- 5. Stop at wall ---
+            #     target_distance = pickingBayWallDistance
+            #     if abs(current_distance - target_distance) <= 0.02:
+            #         bot.SetTargetVelocities(0.0, 0.0)
+            #         state = 7  # next state
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
             elif state == 7:
@@ -590,6 +638,7 @@ if __name__ == '__main__':
 
             # ------------------ STATE 8: Drive to Picking Bay with fields ------------------------------
             elif state == 8:
+                # print(pickingStationRB[pickingBayArrayIndex])
                 has_row2 = (pickingStationRB and pickingStationRB[pickingBayArrayIndex] is not None and len(pickingStationRB[pickingBayArrayIndex]) > 0)
                 if has_row2:
                     all_obstacles = []
