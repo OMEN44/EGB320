@@ -240,9 +240,9 @@ class Navigation(Node):
 
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
-                for i, row in self.aisle_markers:
-                    if row is not None and len(row) > 0:
-                        self.row_index = i
+                for marker in self.aisle_markers:
+                    if marker is not None:
+                        self.row_index = marker[1]  # or whichever field you need
                 self.state = 'CALIBRATION_AISLE_MARKER'
 
             elif len(self.picking_station) != 0:
@@ -281,9 +281,9 @@ class Navigation(Node):
 
             # Look for marker #1
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == 2:  # data = 1 means Bay 1 marker
-                    target_marker = ps
+            for marker in self.aisle_markers:
+                if marker[1] == 2:  # data = 1 means Bay 1 marker
+                    target_marker = marker
                     break
 
             if target_marker is None:
