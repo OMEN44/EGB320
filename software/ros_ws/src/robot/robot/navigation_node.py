@@ -241,16 +241,16 @@ class Navigation(Node):
             self.send_vision_data("isleMarkers,shelves,pickingStation", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
             self.shelves = self.filter_poi("shelf")
-            self.picking_stations = self.filter_poi("pickingStation")
+            self.picking_stations = self.filter_poi("pickingStations")
 
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
-                for i, marker in self.aisle_markers:
+                for i, marker in enumerate(self.aisle_markers):
                     if marker is not None:
                         self.row_index = i  # or whichever field you need
                 self.state = 'CALIBRATION_AISLE_MARKER'
 
-            elif len(self.picking_station) != 0:
+            elif len(self.picking_stations) != 0:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'CALIBRATION_PICKING_STATION'
 
@@ -307,7 +307,7 @@ class Navigation(Node):
                 self.shelves = self.filter_poi("shelf")
 
                 # Take first aisle marker as target
-                for i, marker in self.aisle_markers:
+                for i, marker in enumerate(self.aisle_markers):
                     if self.aisle_markers[i] is not None:
                         aisle_index = i
                         break
@@ -405,7 +405,8 @@ class Navigation(Node):
 
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
-                self.aisle_imu = imu.getYaw - math.pi/2 # Recalibrate aisle IMU
+                current_IMU = imu.getYaw()
+                self.aisle_imu = current_IMU - math.pi/2 # Recalibrate aisle IMU
                 self.state = 'GET_DELIVERY_DATA'
             else:
                 self.publish_velocity(0.0, rotation_velocity)
@@ -522,7 +523,7 @@ class Navigation(Node):
             self.send_vision_data("isleMarkers", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
             if len(self.aisle_markers) != 0:
-                for i, marker in self.aisle_markers:
+                for i, marker in enumerate(self.aisle_markers):
                     if marker is not None:
                         marker_index = i
                         break
@@ -561,7 +562,8 @@ class Navigation(Node):
 
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
-                self.aisle_imu = imu.getYaw - aisle_orientation # Recalibrate aisle IMU
+                current_IMU = imu.getYaw()
+                self.aisle_imu = current_IMU  - aisle_orientation # Recalibrate aisle IMU
                 self.state = 'DRIVE_TO_SHELF_ENTRANCE'
             else:
                 self.publish_velocity(0.0, rotation_velocity)
@@ -651,7 +653,8 @@ class Navigation(Node):
 
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
-                self.aisle_imu = imu.getYaw - shelf_orientation # Recalibrate aisle IMU
+                current_IMU = imu.getYaw()
+                self.aisle_imu = current_IMU - shelf_orientation # Recalibrate aisle IMU
                 self.state = 'DRIVE_TO_SHELF'
             else:
                 self.publish_velocity(0.0, rotation_velocity)          
