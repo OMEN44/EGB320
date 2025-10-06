@@ -724,10 +724,13 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/02/eb/6518a1b00488d48995034226846653c382d676cf5f04be62b3c3fae2c6a1/gpiozero-2.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/56/33/26ec2e8049eaa2f077bf23a12dc61ca559fbfa7bea0516bf263d657ae275/lgpio-0.2.2.0.tar.gz
       - pypi: https://files.pythonhosted.org/packages/23/c2/23e8ee354f1b2a23fc9e6665d7bf54cef5e791e1c6fbb238092054603b30/mpu6050-0.0.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ae/9a/7671a39a0daa80705a4f099308e29749bf8716f59ffb0e29d0df0edb8072/mpu6050_PI-0.0.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/94/f3/ea9ab2171e901318d54223c147b7f07b00cad37e764e723fd0d50ad36a7f/mpu6050_raspberrypi-1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/04/6e/3ae8005fb549cddb12dfac5512c379e3c66c0445443336230daef0bc5b43/piicodev-1.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ce/8b/0bb1984cf716d7b4825a1480f77e71441d39ffebb158ccce5e95ce17eec9/pyfakewebcam-0.1.0.tar.gz
       - pypi: https://files.pythonhosted.org/packages/0a/aa/32d00b90603c2146a6385076e249320cddf3ca17a50773a72b5654f42600/quat-1.0.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4d/5c/70e14aa4f0c586efc017e1d1aa6e2f7921eefc7602fc2d03368ff912aa91/smbus-1.1.post2.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/85/9f/2235ba9001e3c29fc342eeb222104420bcb7bac51555f0c034376a744075/smbus2-0.5.0-py2.py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
   build_number: 16
@@ -4146,6 +4149,10 @@ packages:
   requires_dist:
   - quat
   - smbus
+- pypi: https://files.pythonhosted.org/packages/ae/9a/7671a39a0daa80705a4f099308e29749bf8716f59ffb0e29d0df0edb8072/mpu6050_PI-0.0.2-py3-none-any.whl
+  name: mpu6050-pi
+  version: 0.0.2
+  sha256: 5bad3d9d741387b98699ecde5c91b714b32a2bc7d012cb36bf11998c0da16f91
 - pypi: https://files.pythonhosted.org/packages/94/f3/ea9ab2171e901318d54223c147b7f07b00cad37e764e723fd0d50ad36a7f/mpu6050_raspberrypi-1.2-py3-none-any.whl
   name: mpu6050-raspberrypi
   version: '1.2'
@@ -4443,6 +4450,13 @@ packages:
   - pkg:pypi/pep517?source=hash-mapping
   size: 19044
   timestamp: 1667916747996
+- pypi: https://files.pythonhosted.org/packages/04/6e/3ae8005fb549cddb12dfac5512c379e3c66c0445443336230daef0bc5b43/piicodev-1.10.3-py3-none-any.whl
+  name: piicodev
+  version: 1.10.3
+  sha256: 311a1a0b4966251f1c7ea3e1fc33b3052f10c6dc8c4d40ef86fa9a62e5d38849
+  requires_dist:
+  - smbus2>=0.4.1
+  - pytest>=3.7 ; extra == 'dev'
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/pillow-11.3.0-py311h29e3d14_1.conda
   sha256: b0c055b2355baad2780229f657c3c3c5c8af795be55a8a35bcf15f9c7b6dedf5
   md5: 485cd75f7ec0179884e302eb08fbd861
@@ -11712,6 +11726,13 @@ packages:
   name: smbus
   version: 1.1.post2
   sha256: f96d345e0aa10053a8a4917634f1dc37ba1f656fa5cace7629b71777e90855c6
+- pypi: https://files.pythonhosted.org/packages/85/9f/2235ba9001e3c29fc342eeb222104420bcb7bac51555f0c034376a744075/smbus2-0.5.0-py2.py3-none-any.whl
+  name: smbus2
+  version: 0.5.0
+  sha256: 1a15c3b9fa69357beb038cc0b5d37939702f8bfde1ddc89ca9f17d8461dbe949
+  requires_dist:
+  - sphinx>=1.5.3 ; extra == 'docs'
+  - flake8 ; extra == 'qa'
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/snappy-1.2.2-he774c54_0.conda
   sha256: 06648e1c2fd7c5426b2611d4e480768aea934b54fe8034a8f7a6378a40b20695
   md5: b80bb2997c2139b3659edfca69b72dae
