@@ -3,7 +3,7 @@ from time import sleep
 
 # Gripper Actuation (SG90 positional servo, not FS90R)
 servo3 = AngularServo(
-    23,  # GPIO23
+    13,  # GPIO23
     min_angle=-90,  # Open position
     max_angle=90,   # Closed position
     min_pulse_width=0.0005,  # 0.5ms for full open
