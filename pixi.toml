@@ -11,6 +11,7 @@ vision = "ros2 run robot vision"
 navigation = "ros2 run robot navigation"
 collection  = "ros2 run robot collection"
 mobility = "ros2 run robot mobility"
+test = "ros2 run robot test"
 
 
 [activation]
