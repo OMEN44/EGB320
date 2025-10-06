@@ -1,11 +1,12 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Twist
 from robot.mobility.driver import motor
 import time
 
 MAX_FORWARD_VEL = 0.5  # m/s
-WHEEL_BASE = 0.14      # meters
+WHEEL_BASE = 0.34      # meters
 
 class Mobility(Node):
     def __init__(self):
@@ -13,13 +14,13 @@ class Mobility(Node):
         self.get_logger().info('Mobility node has been started.')
 
         # Node variables
-        self.leftMotor = motor(18, 23)  # PWM pin 18, direction pin 23
-        self.rightMotor = motor(14, 15) # PWM pin 14, direction pin 15
+        self.leftMotor = motor(18, 23)  # PWM pin 18, direction pin 23    Channel B
+        self.rightMotor = motor(14, 15) # PWM pin 14, direction pin 15    Channel A
         self.flipLeft = -1
         self.lastTime = time.time()
         self.targetPwm = [0, 0]  # [left, right]
         self.currentPwm = [0, 0] # [left, right]
-        self.dt = 0.005
+        self.dt = 0.0005
         self.count = 0
         self.sign = 1
 
@@ -28,8 +29,8 @@ class Mobility(Node):
         # self.testingTimer = self.create_timer(.4, self.test)
 
         # Initialise subscribers
-        self.subscription = self.create_subscription(TwistStamped,'/cmd_vel', self.cmdCallBack, 10)
-        self.subscription2 = self.create_subscription(TwistStamped,'/web_vel', self.cmdCallBack, 10)
+        self.subscription = self.create_subscription(Twist, '/cmd_vel', self.cmdCallBack, 10)
+        self.subscription2 = self.create_subscription(TwistStamped, '/web_vel', self.cmdCallBack, 10)
 
     def test(self):
         self.targetPwm[0] = self.count
@@ -63,7 +64,7 @@ class Mobility(Node):
 
 
         if (currentTime - self.lastTime) >= self.dt:
-            # self.get_logger().info('Target PWM: left=%d, right=%d, current left=%d, right=%d' % (self.targetPwm[0], self.targetPwm[1], self.currentPwm[0], self.currentPwm[1]))
+            self.get_logger().info('Target PWM: left=%d, right=%d, current left=%d, right=%d' % (self.targetPwm[0], self.targetPwm[1], self.currentPwm[0], self.currentPwm[1]))
             self.lastTime = currentTime
 
             # Smoothly update currentPwm towards targetPwm
@@ -80,7 +81,12 @@ class Mobility(Node):
             self.rightMotor.motorWrite()
 
     def cmdCallBack(self, msg):
-        left_pwm, right_pwm = self.twist_to_pwm(msg.twist)
+        left_pwm = 0
+        right_pwm = 0
+        if msg.__class__ == TwistStamped:
+            left_pwm, right_pwm = self.twist_to_pwm(msg.twist)
+        else:
+            left_pwm, right_pwm = self.twist_to_pwm(msg)
         self.targetPwm[0] = int(left_pwm * 100)   # Scale to [-100, 100]
         self.targetPwm[1] = int(right_pwm * 100)  # Scale to [-100, 100]
         # self.get_logger().info('Received cmd_vel: linear.x=%.2f, angular.z=%.2f' % (msg.twist.linear.x, msg.twist.angular.z))
