@@ -344,7 +344,7 @@ while True:
     #     sleep(1)
 
     
-    user_input = input("Enter 0 (Do nothing), 1 (Idle), 2 (Low Shelf), 3 (Middle Shelf), 4 (High Shelf), 7 (Picking Bay Collect), or q to quit: ")
+    user_input = input("Enter 0 (Do nothing), 1 (Idle), 2 (Low Shelf), 3 (Middle Shelf), 4 (High Shelf), 5 (Picking Bay Collect), or q to quit: ")
 
     if user_input == "0":
         print("Doing nothing...")
@@ -379,7 +379,7 @@ while True:
         servo3.angle = 90 # Open
         sleep(1)
 
-    elif user_input == "7":
+    elif user_input == "5":
         servo3.angle = 90 # Open
         sleep(1)
         picking_bay_collect()

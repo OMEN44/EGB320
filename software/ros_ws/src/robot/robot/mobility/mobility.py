@@ -162,7 +162,7 @@ class Mobility(Node):
             self.driver.right_motor_id, abs(target_pwm_right), right_direction
         )
 
-        if left_done and right_done:
+        if updated_left_PWM and updated_right_PWM:
             self.driver.status = f"Reached target PWM: ({target_pwm_left}, {target_pwm_right})"
         else:
             self.driver.status = f"Adjusting PWM: left={self.driver.left_pwm}, right={self.driver.right_pwm}"
