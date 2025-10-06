@@ -28,7 +28,7 @@ def proccess(self, frame):
             [outputFrame, pickingStations] = findPickingStation(self, hsvframe, outputFrame)
             data += pickingStations
         elif filter == "items":
-            [outputFrame, items] = findItems(hsvframe, outputFrame)
+            [outputFrame, items] = findItems(self, hsvframe, outputFrame)
             data += items
         elif filter == "obstacles":
             [outputFrame, obstacles] = findObstacles(self, hsvframe, outputFrame)

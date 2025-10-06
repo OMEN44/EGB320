@@ -24,6 +24,7 @@ setup(
             'navigation = robot.navigation_node:main',
             'mobility = robot.mobility_node:main',
             'collection = robot.collection_node:main',
+            'test = robot.test_node:main',
         ],
     },
 )

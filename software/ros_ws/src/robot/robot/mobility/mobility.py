@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from dfrobot_driver import THIS_BOARD_TYPE, DFRobot_DC_Motor_IIC
+from robot.mobility.driver import THIS_BOARD_TYPE, DFRobot_DC_Motor_IIC
 import time
 
 class MotorDriver:

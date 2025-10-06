@@ -645,6 +645,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-distro-mutex-0.7.0-jazzy_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rosdistro-1.0.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/rospkg-1.6.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/scipy-1.16.2-py311h33b5a33_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/sdl2-2.32.54-h5ad3122_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/sdl3-3.2.22-h506f210_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/service-identity-24.2.0-pyha770c72_1.conda
@@ -722,7 +723,14 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/7e/a6/ddd0f130e44a7593ac6c55aa93f6e256d2270fd88e9d1b64ab7f22ab8fde/colorzero-2.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/02/eb/6518a1b00488d48995034226846653c382d676cf5f04be62b3c3fae2c6a1/gpiozero-2.0.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/56/33/26ec2e8049eaa2f077bf23a12dc61ca559fbfa7bea0516bf263d657ae275/lgpio-0.2.2.0.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/23/c2/23e8ee354f1b2a23fc9e6665d7bf54cef5e791e1c6fbb238092054603b30/mpu6050-0.0.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ae/9a/7671a39a0daa80705a4f099308e29749bf8716f59ffb0e29d0df0edb8072/mpu6050_PI-0.0.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/94/f3/ea9ab2171e901318d54223c147b7f07b00cad37e764e723fd0d50ad36a7f/mpu6050_raspberrypi-1.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/04/6e/3ae8005fb549cddb12dfac5512c379e3c66c0445443336230daef0bc5b43/piicodev-1.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ce/8b/0bb1984cf716d7b4825a1480f77e71441d39ffebb158ccce5e95ce17eec9/pyfakewebcam-0.1.0.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/0a/aa/32d00b90603c2146a6385076e249320cddf3ca17a50773a72b5654f42600/quat-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4d/5c/70e14aa4f0c586efc017e1d1aa6e2f7921eefc7602fc2d03368ff912aa91/smbus-1.1.post2.tar.gz
+      - pypi: https://files.pythonhosted.org/packages/85/9f/2235ba9001e3c29fc342eeb222104420bcb7bac51555f0c034376a744075/smbus2-0.5.0-py2.py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
   build_number: 16
@@ -4134,6 +4142,21 @@ packages:
   purls: []
   size: 558708
   timestamp: 1730581372400
+- pypi: https://files.pythonhosted.org/packages/23/c2/23e8ee354f1b2a23fc9e6665d7bf54cef5e791e1c6fbb238092054603b30/mpu6050-0.0.3-py3-none-any.whl
+  name: mpu6050
+  version: 0.0.3
+  sha256: 244c9344677cac3de458e30e7bfe1257e834eefc250a4a724c424c5c3d025797
+  requires_dist:
+  - quat
+  - smbus
+- pypi: https://files.pythonhosted.org/packages/ae/9a/7671a39a0daa80705a4f099308e29749bf8716f59ffb0e29d0df0edb8072/mpu6050_PI-0.0.2-py3-none-any.whl
+  name: mpu6050-pi
+  version: 0.0.2
+  sha256: 5bad3d9d741387b98699ecde5c91b714b32a2bc7d012cb36bf11998c0da16f91
+- pypi: https://files.pythonhosted.org/packages/94/f3/ea9ab2171e901318d54223c147b7f07b00cad37e764e723fd0d50ad36a7f/mpu6050_raspberrypi-1.2-py3-none-any.whl
+  name: mpu6050-raspberrypi
+  version: '1.2'
+  sha256: 89c7dc3e16904ffe9eb2d6b64d464477cbcc00f4640cd563519eefb1d16cf1ba
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/msgpack-python-1.1.1-py311hfca10b7_1.conda
   sha256: 66ff424c541121e1275eb832c629b1d0cd883fd60ac1b67b5edf1666ac9426a0
   md5: 7f268d3a0923f12dedce1634bd6a6dd9
@@ -4427,6 +4450,13 @@ packages:
   - pkg:pypi/pep517?source=hash-mapping
   size: 19044
   timestamp: 1667916747996
+- pypi: https://files.pythonhosted.org/packages/04/6e/3ae8005fb549cddb12dfac5512c379e3c66c0445443336230daef0bc5b43/piicodev-1.10.3-py3-none-any.whl
+  name: piicodev
+  version: 1.10.3
+  sha256: 311a1a0b4966251f1c7ea3e1fc33b3052f10c6dc8c4d40ef86fa9a62e5d38849
+  requires_dist:
+  - smbus2>=0.4.1
+  - pytest>=3.7 ; extra == 'dev'
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/pillow-11.3.0-py311h29e3d14_1.conda
   sha256: b0c055b2355baad2780229f657c3c3c5c8af795be55a8a35bcf15f9c7b6dedf5
   md5: 485cd75f7ec0179884e302eb08fbd861
@@ -5153,6 +5183,10 @@ packages:
   purls: []
   size: 54270004
   timestamp: 1750920790705
+- pypi: https://files.pythonhosted.org/packages/0a/aa/32d00b90603c2146a6385076e249320cddf3ca17a50773a72b5654f42600/quat-1.0.0-py3-none-any.whl
+  name: quat
+  version: 1.0.0
+  sha256: c0c80943f89f2da22d1888cb732e9e7d6c19b1eeefdbeb6d26d1e2d51a63098c
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/rav1e-0.7.1-ha3529ed_3.conda
   sha256: f1631eb0be7391b0f470fdd7c902741551eb00381efd52b234ceadfccf34588b
   md5: 0a6e034273782e6e863d46f1d2a5078b
@@ -11558,6 +11592,29 @@ packages:
   - pkg:pypi/rospkg?source=hash-mapping
   size: 31293
   timestamp: 1737835793379
+- conda: https://conda.anaconda.org/conda-forge/linux-aarch64/scipy-1.16.2-py311h33b5a33_0.conda
+  sha256: 8bba84fc05ec23d0eec9e8877ecef8c4733c081575f0e90ef5de6b06e1bf4550
+  md5: 135bbc31da613f1f8456562cf84618b7
+  depends:
+  - libblas >=3.9.0,<4.0a0
+  - libcblas >=3.9.0,<4.0a0
+  - libgcc >=14
+  - libgfortran
+  - libgfortran5 >=14.3.0
+  - liblapack >=3.9.0,<4.0a0
+  - libstdcxx >=14
+  - numpy <2.6
+  - numpy >=1.23,<3
+  - numpy >=1.25.2
+  - python >=3.11,<3.12.0a0
+  - python >=3.11,<3.12.0a0 *_cpython
+  - python_abi 3.11.* *_cp311
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/scipy?source=hash-mapping
+  size: 16882752
+  timestamp: 1757682807599
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/sdl2-2.32.54-h5ad3122_0.conda
   sha256: d83c13fc35ed447d186150d32b8bc48bdd73a047280ba6e06f151d4cce52639d
   md5: 6b38021cb802b4e5bede7fe38c547883
@@ -11665,6 +11722,17 @@ packages:
   - pkg:pypi/six?source=hash-mapping
   size: 18455
   timestamp: 1753199211006
+- pypi: https://files.pythonhosted.org/packages/4d/5c/70e14aa4f0c586efc017e1d1aa6e2f7921eefc7602fc2d03368ff912aa91/smbus-1.1.post2.tar.gz
+  name: smbus
+  version: 1.1.post2
+  sha256: f96d345e0aa10053a8a4917634f1dc37ba1f656fa5cace7629b71777e90855c6
+- pypi: https://files.pythonhosted.org/packages/85/9f/2235ba9001e3c29fc342eeb222104420bcb7bac51555f0c034376a744075/smbus2-0.5.0-py2.py3-none-any.whl
+  name: smbus2
+  version: 0.5.0
+  sha256: 1a15c3b9fa69357beb038cc0b5d37939702f8bfde1ddc89ca9f17d8461dbe949
+  requires_dist:
+  - sphinx>=1.5.3 ; extra == 'docs'
+  - flake8 ; extra == 'qa'
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/snappy-1.2.2-he774c54_0.conda
   sha256: 06648e1c2fd7c5426b2611d4e480768aea934b54fe8034a8f7a6378a40b20695
   md5: b80bb2997c2139b3659edfca69b72dae

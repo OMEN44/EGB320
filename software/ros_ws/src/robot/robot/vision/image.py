@@ -2,9 +2,6 @@ import cv2
 
 from robot.vision.pipeline import proccess
 
-WIDTH = 640
-HEIGHT = 480
-
 def useImage(self, image):
     img = cv2.imread(f'/home/pi/EGB320/software/python/test_data2/{image}.jpg')
 

@@ -12,9 +12,11 @@ import numpy as np
 
 import cv2
 
+import csv
+import os
+import json
 
-WIDTH = 640
-HEIGHT = 480
+BASE_URL = '/home/pi/EGB320/'
 
 class Vision(Node):
     def __init__(self):
@@ -29,17 +31,19 @@ class Vision(Node):
         # obstacles
         # shelves
         # self.pipeline = ["pickingStation", "isleMarkers", "items", "colourMask", "shelves", "obstacles"]
-        # self.pipeline = ["pickingStation", "isleMarkers", "items", "colourMask", "test"]
-        self.pipeline = ["items", "colourMask", "shelves"]
+        # self.pipeline = ["shelves", "isleMarkers", "items", "colourMask", ""]
+        self.pipeline = ["items", "colourMask", "pickingStation"]
         # self.pipeline = ["test", "colourMask"]
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)
         self.webuiTopic = self.create_subscription(String, '/web_topic', self.onWebMessage, 10)
+        self.orderTopic = self.create_subscription(String, '/order', self.onOrderMessage, 10)
         self.numberTopic = self.create_subscription(Float32MultiArray, '/number_topic', self.onNumberMessage, 10)
 
         # Initialise publishers
         self.poi = self.create_publisher(PoiGroup, '/poi', 10)
+        self.orderFilePub = self.create_publisher(String, '/order_file', 10)
 
         # Initialise timers
         timer_period = 0.00001
@@ -83,6 +87,25 @@ class Vision(Node):
             return
 
         cv2.imwrite(f'/home/pi/EGB320/software/python/calibration/{msg.data}.jpg', frame)
+
+    def onOrderMessage(self, msg):
+        if msg.data == 'init':
+            try:
+                files = os.listdir(BASE_URL)
+                self.files = {}
+                for file in files:
+                    if file.endswith('.csv'):
+                        with open(os.path.join(BASE_URL, file), mode='r', newline='') as f:
+                            reader = csv.reader(f)
+                            next(reader)
+                            self.files[file] = list(reader)
+            except Exception as e:
+                self.get_logger().info(f'Error accessing base directory: {e}')
+
+            if len(self.files) > 0:
+                self.orderFilePub.publish(String(data=json.dumps(self.files)))
+        else:
+            print(f'Order received: {msg.data}')
 
     def onNumberMessage(self, msg):
         self.colourMask = (np.array([msg.data[0], msg.data[2], msg.data[4]]), np.array([msg.data[1], msg.data[3], msg.data[5]]))
