@@ -39,6 +39,7 @@ class CollectionNode(Node):
         self.timer = self.create_timer(self.dt, self.timer_callback)
 
     def timer_callback(self):
+        """Update servo1 angle incrementally towards target angle."""
         current_time = time()
         if (current_time - self.last_time) >= self.dt:
             self.last_time = current_time
@@ -58,7 +59,7 @@ class CollectionNode(Node):
             )
 
     def smooth_move(self, servo1_target, servo3_target):
-        "Set target angle for servo1 (smooth) and move servo3 instantly."
+        """Set target angle for servo1 (smooth) and move servo3 instantly."""
         self.get_logger().info(f'Moving: servo1={servo1_target}, servo3={servo3_target}')
         self.target_angle_servo1 = max(min(servo1_target, 90), -90)
         self.servo3.angle = max(min(servo3_target, 90), -90)
@@ -68,16 +69,19 @@ class CollectionNode(Node):
         sleep(1)
 
     def open_gripper(self):
+        """Set gripper to open position (90 degrees)."""
         self.get_logger().info('Opening gripper')
         self.servo3.angle = 90
         sleep(1)
 
     def close_gripper(self):
+        """Set gripper to closed position (-90 degrees)."""
         self.get_logger().info('Closing gripper')
         self.servo3.angle = -90
         sleep(1)
 
     def floor_level(self):
+        """Move to floor level and handle gripper."""
         self.get_logger().info('Moving to Floor Level')
         self.open_gripper()
         self.smooth_move(-85, 90)
@@ -85,32 +89,35 @@ class CollectionNode(Node):
         self.publish_status('Floor Level Completed')
 
     def bottom_shelf(self):
+        """Move to bottom shelf and open gripper."""
         self.get_logger().info('Moving to Bottom Shelf')
         self.smooth_move(-65, 90)
         self.open_gripper()
         self.publish_status('Bottom Shelf Completed')
 
     def middle_shelf(self):
+        """Move to middle shelf and open gripper."""
         self.get_logger().info('Moving to Middle Shelf')
         self.smooth_move(-20, 90)
         self.open_gripper()
         self.publish_status('Middle Shelf Completed')
 
     def top_shelf(self):
+        """Move to top shelf and open gripper."""
         self.get_logger().info('Moving to Top Shelf')
         self.smooth_move(50, 90)
         self.open_gripper()
         self.publish_status('Top Shelf Completed')
 
     def publish_status(self, status):
-        "Publish status message to '/servo_status' topic."
+        """Publish status message to '/servo_status' topic."""
         msg = String()
         msg.data = status
         self.status_publisher.publish(msg)
         self.get_logger().info(f'Status: {status}')
 
     def on_servo_command(self, msg):
-        "Handle incoming servo commands."
+        """Handle incoming servo commands."""
         command = msg.data
         self.get_logger().info(f'Received command: {command}')
         if command == 0:
@@ -124,6 +131,9 @@ class CollectionNode(Node):
         elif command == 4:
             self.close_gripper()
             self.publish_status('Gripper Closed')
+        elif command == 5:
+            self.open_gripper()
+            self.publish_status('Gripper Opened')
         else:
             self.get_logger().info(f'Invalid command: {command}')
             self.publish_status(f'Invalid Command: {command}')
