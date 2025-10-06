@@ -21,14 +21,12 @@ shelf_to_aisle = {
     "2": ["2", np.pi/2],
     "3": ["2", -np.pi/2],
     "4": ["3", np.pi/2],
-    "5": ["3", -np.pi/2]   # fixed duplicate key
+    "5": ["3", -np.pi/2]   
 }
 
-obstacle_width = 0.15  # meters
-
-shelf_distance_marker = {"1": 1, "2": 1, "3": 0.42, "4": 2}
-aisle_distance_wall = {"1": [0.2, np.pi/2], "2": [0.8, -np.pi/2], "3": [0.2, -np.pi/2]}
-shelfID = 1.3  # Example shelf ID
+pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
+shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
+aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 # ------------------------------------------------
 
 
@@ -54,10 +52,11 @@ class Navigation(Node):
 
         self.timer_ = self.create_timer(0.001, self.state_machine)
 
+        self.shelves = []
+        self.items = []
         self.obstacles = []
         self.aisle_markers = []
-        self.shelves = []
-        self.picking_station = []
+        self.picking_stations = []
 
         self.pois = []
 
@@ -93,7 +92,7 @@ class Navigation(Node):
         picking_bay, shelf = deliveries[delivery_no]
 
         # Array index for picking bay
-        picking_bay_index = picking_bay
+        picking_bay_index = int(picking_bay) - 1
 
         # Split shelf ID into first (aisle) and second (shelf distance key)
         first, second = str(shelf).split(".")
@@ -107,6 +106,7 @@ class Navigation(Node):
         # Aisle wall distance and orientation
         aisle_wall_distance, aisle_orientation = aisle_distance_wall[aisle_id]
 
+        aisle_id = int(aisle_id) - 1
         # Shelf marker distance (based on the second digit)
         shelf_marker_distance = shelf_distance_marker[second]
 
@@ -151,21 +151,21 @@ class Navigation(Node):
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
-        self.pois = []
-        for item in msg.pois:
-            self.pois.append((item.name, item.type, ((item.distance)/100000), [((item.bearing[0])/1000),((item.bearing[1])/1000), ((item.bearing[2])/1000)]))
+        self.pois = msg.pois
+        # for item in msg.pois:
+        #     self.pois.append((item.name, item.type, ((item.distance)/100000), [((item.bearing[0])/1000),((item.bearing[1])/1000), ((item.bearing[2])/1000)]))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
 
-    def filter_poi(self, poi_type):
+    # def filter_poi(self, poi_type):
         
-        listOfPois = []
-        for poi in self.pois:
-            if poi_type == poi[0]:
-                listOfPois.append(poi)
+    #     listOfPois = []
+    #     for poi in self.pois:
+    #         if poi_type == poi[0]:
+    #             listOfPois.append(poi)
 
-        return listOfPois
+    #     return listOfPois
 
     def move_to_marker_apf(self, target_marker, target_distance, next_state):
         """
@@ -177,14 +177,14 @@ class Navigation(Node):
             self.publish_velocity(0.0, 0.15)
             return
 
-        distance_to_marker = target_marker[2]
-        middle_bearing = target_marker[3][1]  # middle bearing only
+        distance_to_marker = target_marker[0]
+        middle_bearing = target_marker[1][1]  # middle bearing only
 
         # Build obstacle list (middle bearings only)
         all_obstacles = []
         for group in (self.obstacles, self.shelves):
             for obj in group:
-                all_obstacles.append((obj[2], obj[3][1]))  # distance, middle bearing
+                all_obstacles.append((obj[0], obj[1][1]))  # distance, middle bearing
 
         error = distance_to_marker - target_distance
 
@@ -224,6 +224,11 @@ class Navigation(Node):
         shelf_orientation = None
         aisle_orientation = None
         self.get_logger().info(self.state)
+        self.shelves = self.pois["shelves"]
+        self.items = self.pois["items"]
+        self.obstacles = self.pois["obstacles"]
+        self.aisle_markers = self.pois["islemarkers"]
+        self.picking_stations = self.pois["pickingstations"]
         
         # print(self.state)
         # if self.state == 'START':
@@ -236,13 +241,13 @@ class Navigation(Node):
             self.send_vision_data("isleMarkers,shelves,pickingStation", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
             self.shelves = self.filter_poi("shelf")
-            self.picking_station = self.filter_poi("pickingStation")
+            self.picking_stations = self.filter_poi("pickingStation")
 
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
-                for marker in self.aisle_markers:
+                for i, marker in self.aisle_markers:
                     if marker is not None:
-                        self.row_index = marker[1]  # or whichever field you need
+                        self.row_index = i  # or whichever field you need
                 self.state = 'CALIBRATION_AISLE_MARKER'
 
             elif len(self.picking_station) != 0:
@@ -264,10 +269,8 @@ class Navigation(Node):
 
             # Look for Bay 1 marker
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == 1:
-                    target_marker = ps
-                    break
+            if self.picking_stations[0] is not None:
+                target_marker = self.picking_stations[0]
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(target_marker, target_distance=0.5, next_state='TURN_TO_AISLE_2')
@@ -279,20 +282,13 @@ class Navigation(Node):
             self.send_vision_data("isleMarkers", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
 
-            # Look for marker #1
             target_marker = None
-            for marker in self.aisle_markers:
-                if marker[1] == 2:  # data = 1 means Bay 1 marker
-                    target_marker = marker
-                    break
-
-            if target_marker is None:
-                # Keep turning until marker found
-                self.publish_velocity(0.0, calibration_turn_speed)
-                return
+            if self.aisle_markers[1] is not None:  # data = 1 means Bay 1 marker
+                    target_marker = self.aisle_markers[1]
+                    self.publish_velocity(0.0, calibration_turn_speed)
 
             # Align with centre bearing
-            centre_bearing = target_marker[3][1]  # middle bearing
+            centre_bearing = target_marker[1][1]  # middle bearing
             kp = 0.8
             rotation_velocity = kp * centre_bearing
             rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
@@ -311,7 +307,12 @@ class Navigation(Node):
                 self.shelves = self.filter_poi("shelf")
 
                 # Take first aisle marker as target
-                target_marker = self.aisle_markers[0] if len(self.aisle_markers) > 0 else None
+                for i, marker in self.aisle_markers:
+                    if self.aisle_markers[i] is not None:
+                        aisle_index = i
+                        break
+                
+                target_marker = self.aisle_markers[aisle_index]
 
                 # Move using APF and switch state when target distance reached
                 self.move_to_marker_apf(target_marker, target_distance=self.zone_dist_aisle_marker, next_state='FIND_PICKING_BAY1')
@@ -325,25 +326,19 @@ class Navigation(Node):
 
             # Look for marker #1
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == 1:  # data = 1 means Bay 1 marker
-                    target_marker = ps
-                    break
-
-            if target_marker is None:
-                # Keep turning until marker found
+            if self.picking_stations[0] is not None:  # data = 1 means Bay 1 marker
+                target_marker = self.picking_stations[0]
                 self.publish_velocity(0.0, calibration_turn_speed)
-                return
 
             # Align with centre bearing
-            centre_bearing = target_marker[3][1]  # middle bearing
+            centre_bearing = target_marker[1][1]  # middle bearing
             kp = 0.8
             rotation_velocity = kp * centre_bearing
             rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
             if abs(centre_bearing) < 0.02:  # ~1 degree tolerance
                 self.publish_velocity(0.0, 0.0)
-                self.distance_picking_bay_1 = target_marker[2]  # distance
+                self.distance_picking_bay_1 = target_marker[0]  # distance
 
                 self.get_logger().info(f"Picking Bay 1 found at {self.distance_picking_bay_1:.2f} m")
                 self.state = 'FIND_PICKING_BAY2'
@@ -356,27 +351,22 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
 
             self.send_vision_data("pickingStation", "")
-            self.picking_stations = self.filter_poi("pickingStation")
+            self.picking_stations = self.filter_poi("pickingStations")
 
             # Look for marker #2
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == 2:  # data = 2 means Bay 2 marker
-                    target_marker = ps
-                    break
-
-            if target_marker is None:
+            if self.picking_stations[1] is not None:  # data = 2 means Bay 2 marker
+                target_marker = self.picking_stations[1]
                 self.publish_velocity(0.0, calibration_turn_speed)
-                return
 
-            centre_bearing = target_marker[3][1]
+            centre_bearing = target_marker[1][1]
             kp = 0.8
             rotation_velocity = kp * centre_bearing
             rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
             if abs(centre_bearing) < 0.02:
                 self.publish_velocity(0.0, 0.0)
-                self.distance_picking_bay_2 = target_marker[2]
+                self.distance_picking_bay_2 = target_marker[0]
 
                 self.get_logger().info(f"Picking Bay 2 found at {self.distance_picking_bay_2:.2f} m")
                 self.state = 'CALCULATE_AISLE_IMU'
@@ -415,6 +405,7 @@ class Navigation(Node):
 
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
+                self.aisle_imu = imu.getYaw - math.pi/2 # Recalibrate aisle IMU
                 self.state = 'GET_DELIVERY_DATA'
             else:
                 self.publish_velocity(0.0, rotation_velocity)
@@ -423,25 +414,60 @@ class Navigation(Node):
             picking_bay_index, aisle_id, picking_bay_wall_distance, aisle_wall_distance, shelf_marker_distance, shelf_orientation, aisle_orientation = self.get_delivery_measurements(self.deliveries, self.delivery_no)
             self.state = 'DRIVE_TO_FRONT_OF_PICKING_STATION'
 
+        # elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
+        #     current_distance = None # Get TIME OF FLIGHT SENSOR WORKING
+        #     target_distance = picking_bay_wall_distance 
+        #     error = current_distance - target_distance
+
+        #     # proportional control
+        #     kp = 0.5   # tune as needed
+        #     v = kp * error
+
+        #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
+        #     v = max(min(v, 0.12), 0.03)  
+
+        #     self.publish_velocity(v, 0.0)
+        #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+
+        #     # stop when within ±1 cm of 0.45 m
+        #     if abs(error) <= 0.02:
+        #         self.publish_velocity(0.0, 0.0)
+        #         self.state = 'TURN_TO_PICKING_BAY'
+
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
-            current_distance = None # Get TIME OF FLIGHT SENSOR WORKING
-            target_distance = picking_bay_wall_distance 
-            error = current_distance - target_distance
+            # --- 1. Sensor reads ---
+            current_distance = self.tof_distance  # Time-of-Flight sensor
+            imu_yaw = self.imu_yaw                # Robot IMU yaw (rad)
+            all_obstacles = []
 
-            # proportional control
-            kp = 0.5   # tune as needed
-            v = kp * error
+            for group in (self.obstacles, self.shelves):
+                if group:
+                    all_obstacles.extend(group)
 
-            # clamp velocity so it doesn’t crawl too slowly or rush too fast
-            v = max(min(v, 0.12), 0.03)  
+            # --- 2. Determine reference bearing ---
+            # Select shelf or picking bay bearings (whichever is detected)
+            bearings = []
+            # if self.shelves:
+            #     bearings.extend([b for _, b in self.shelfRB])
+            if self.picking_stations:
+                bearings.extend([b for _, b in self.picking_stations])
 
-            self.publish_velocity(v, 0.0)
-            # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                ref_bearing = max(bearings)  # rightmost
 
-            # stop when within ±1 cm of 0.45 m
-            if abs(error) <= 0.02:
-                self.publish_velocity(0.0, 0.0)
-                self.state = 'TURN_TO_PICKING_BAY'
+                # Offset the bearing by a few degrees (adjust sign & value as needed)
+                offset_deg = 10.0
+                offset = np.radians(offset_deg)
+                goal_bearing = ref_bearing + offset
+            
+            else:
+                # Fallback: straight ahead
+                goal_bearing = imu_yaw
+
+            # --- 3. Attractive field goal (bearing only) ---
+            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
+            goal = [goal_distance, goal_bearing]
+
+            self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_TO_PICKING_BAY')
 
         elif self.state == 'TURN_TO_PICKING_BAY':
             turn_speed = 0.14
@@ -450,18 +476,14 @@ class Navigation(Node):
 
             # Look for marker #1
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == picking_bay_index: 
-                    target_marker = ps
-                    break
-
-            if target_marker is None:
+            if self.picking_stations[picking_bay_index]:
+                target_marker = self.picking_stations[picking_bay_index]
                 # Keep turning until marker found
+            else:
                 self.publish_velocity(0.0, turn_speed)
-                return
 
             # Align with centre bearing
-            centre_bearing = target_marker[3][1]  # middle bearing
+            centre_bearing = target_marker[1][1]  # middle bearing
             kp = 0.8
             rotation_velocity = kp * centre_bearing
             rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
@@ -479,10 +501,8 @@ class Navigation(Node):
 
             # Look for current picking bay
             target_marker = None
-            for ps in self.picking_stations:
-                if ps[1] == picking_bay_index: 
-                    target_marker = ps
-                    break
+            if self.picking_stations[picking_bay_index]:
+                target_marker = self.picking_stations[picking_bay_index]
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(target_marker, target_distance=0.2, next_state='ADJUST_TO_ITEM')
@@ -502,7 +522,12 @@ class Navigation(Node):
             self.send_vision_data("isleMarkers", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
             if len(self.aisle_markers) != 0:
-                centre_bearing = self.aisle_markers[0][3][1]  # middle bearing
+                for i, marker in self.aisle_markers:
+                    if marker is not None:
+                        marker_index = i
+                        break
+
+                centre_bearing = self.aisle_markers[marker_index][1][1]  # middle bearing
                 kp = 0.8
                 rotation_velocity = kp * centre_bearing
                 rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
@@ -521,7 +546,7 @@ class Navigation(Node):
             self.shelves = self.filter_poi("shelf")
 
             # Take first aisle marker as target
-            target_marker = self.aisle_markers[0] if len(self.aisle_markers) > 0 else None
+            target_marker = self.aisle_markers[marker_index] if len(self.aisle_markers) > 0 else None
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(target_marker, target_distance=self.zone_dist_aisle_marker, next_state='TURN_TO_SHELF_DIR')
@@ -536,6 +561,7 @@ class Navigation(Node):
 
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
+                self.aisle_imu = imu.getYaw - aisle_orientation # Recalibrate aisle IMU
                 self.state = 'DRIVE_TO_SHELF_ENTRANCE'
             else:
                 self.publish_velocity(0.0, rotation_velocity)
@@ -567,15 +593,11 @@ class Navigation(Node):
 
             
             target_marker = None
-            for am in self.aisle_markers:
-                if am[1] == aisle_id: 
-                    target_marker = am
-                    break
-
-            if target_marker is None:
+            if self.aisle_markers[aisle_id] is not None:
+                target_marker = self.aisle_markers[aisle_id]
                 # Keep turning until marker found
+            else:
                 self.publish_velocity(0.0, turn_speed)
-                return
 
             # Align with centre bearing
             centre_bearing = target_marker[3][1]  # middle bearing
@@ -598,11 +620,11 @@ class Navigation(Node):
             self.obstacles = self.filter_poi("obstacle")
 
             # Look for target aisle marker
-            target_marker = None
-            for am in self.aisle_markers:
-                if am[1] == aisle_id: 
-                    target_marker = am
-                    break
+            if self.aisle_markers[aisle_id] is not None:
+                target_marker = self.aisle_markers[aisle_id]                
+            else:
+                self.publish_velocity(0.0, turn_speed)
+
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(
@@ -615,54 +637,36 @@ class Navigation(Node):
             self.publish_collection(3) # Command to lift arm
             if self.arm_status == True: # Assuming arm_status is updated via a subscriber
                 self.arm_status = False
-                time_turn = time.time()
                 self.state = 'TURN_TO_SHELF'
                 self.get_logger().info("Turning to shelf...")
 
 
         elif self.state == 'TURN_TO_SHELF':
-            turn_dir = (shelf_orientation < 0.0)
-            if turn_dir:
-                omega = 0.2
-            else: 
-                omega = -0.2
-            
-            turning_duration = abs(shelf_orientation) / omega
-            if (time.time() - time_turn) > turning_duration:
+            target_heading = self.aisleIMU + shelf_orientation
+            current_heading = imu.getYaw()  # <-- replace with your IMU API
+            e_theta = apf.angle_wrap(target_heading - current_heading)
+            kp = 0.5  # Adjust gain as needed
+            rotation_velocity = kp * e_theta
+            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+            if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
-                self.state = 'ALIGN_TO_SHELF'
+                self.aisle_imu = imu.getYaw - shelf_orientation # Recalibrate aisle IMU
+                self.state = 'DRIVE_TO_SHELF'
             else:
-                self.publish_velocity(0.0, omega)
-
-        elif self.state == 'ALIGN_TO_SHELF':
-            self.send_vision_data("shelves", "")
-            self.shelves = self.filter_poi("shelves")
-            if self.shelves:
-                left_most_shelf = self.shelves[0]["bearing"][0]
-                right_most_shelf = self.shelves[0]["bearing"][2]
-                error = left_most_shelf - right_most_shelf
-
-                kp = 0.4
-                omega = max(min(kp*error, 0.3), -0.3)
-
-                if abs(error) < 0.01:
-                    self.publish_velocity(0.0, 0.0)
-                    self.get_logger().info("Aligned with shelf...")
-                    time_to_shelf = time.time()
-                    self.state = 'DRIVE_TO_SHELF'
-                else:
-                    self.publish_velocity(0.0, omega)
-            else:
-                self.state = 'DRIVE_INTO_AISLE'           
-                 
+                self.publish_velocity(0.0, rotation_velocity)          
 
         elif self.state == 'DRIVE_TO_SHELF':
-            if (time.time() - time_to_shelf) > 3.0:
+            current_distance = self.tof_distance  # Time-of-Flight sensor
+            forward_speed = 0.01
+            distance_shelf_bay = 0.015
+            error = abs(current_distance - distance_shelf_bay)
+            if error < 0.01:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'DROP_ITEM'
                 return
             else: 
-                self.publish_velocity(0.01, 0.0)
+                self.publish_velocity(forward_speed, 0.0)
 
         elif self.state == 'DROP_ITEM':
             self.publish_collection(4) # Command to drop item
