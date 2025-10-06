@@ -87,7 +87,8 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
 
         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi/2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        U_rep[mask] = np.maximum(U_rep[mask], (1.0 / obs_distance))
+        k_rep = 10  # or higher
+        U_rep[mask] = np.maximum(U_rep[mask], k_rep / obs_distance)
     return U_rep
 
 
@@ -204,7 +205,7 @@ if __name__ == '__main__':
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-            # print(packingStationRB)
+            print(shelfRB)
             # print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
