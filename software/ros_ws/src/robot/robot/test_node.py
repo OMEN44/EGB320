@@ -100,7 +100,7 @@ class ServoTestNode(Node):
         super().__init__('servo_test_node')
         self.get_logger().info('Servo test node started')
 
-        # Initialize publisher for servo actions
+        # Initialise publisher for servo actions
         self.servo_pub = self.create_publisher(Int8, '/servo_actions', 10)
         # Subscribe to servo status to confirm action completion
         self.status_sub = self.create_subscription(
@@ -114,7 +114,6 @@ class ServoTestNode(Node):
         self.test_timer = self.create_timer(0.1, self.timer_callback)  # Check every 0.1s
 
     def status_callback(self, msg):
-        """Handle status messages from CollectionNode."""
         self.get_logger().info(f'Status: {msg.data}')
         if 'Completed' in msg.data or 'Gripper Closed' in msg.data or 'Gripper Opened' in msg.data:
             self.action_completed = True
@@ -124,7 +123,6 @@ class ServoTestNode(Node):
             self.action_completed = True
 
     def timer_callback(self):
-        """Publish the next servo command when the previous action is complete."""
         if self.current_command_index >= len(self.commands):
             return  # Stop sending commands after sequence completes
 
