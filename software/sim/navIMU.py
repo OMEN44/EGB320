@@ -40,7 +40,7 @@ delivery_one, delivery_two, delivery_three = deliveries
 print(deliveries)
 
 # Example deliveries: (picking bay number, shelf id)
-# deliveries = [(3, 0.3), (2, 0.3), (1, 5.4)]
+deliveries = [(1, 5.4), (2, 0.3), (3, 5.4)]
 
 deliveryNo = 0
 
@@ -174,8 +174,8 @@ robot_starting_x = random.uniform(-0.8, -0.4)
 robot_starting_y = random.uniform(-0.85, -0.1)  
 robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
 # sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
-# sceneParameters.robotStartingPosition = [-0.5, -0.3, np.pi/2]  # x, y, theta in radians
-sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, math.radians(225)]  # x, y, theta in radians
+sceneParameters.robotStartingPosition = [-0.5, -0.1, math.radians(225)]  # x, y, theta in radians
+# sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, math.radians(225)]  # x, y, theta in radians
 
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
@@ -317,7 +317,7 @@ if __name__ == '__main__':
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
 
-                    if aisleDistance < 1.24:
+                    if aisleDistance < 1.3:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = 3.1
                 else:
@@ -982,23 +982,6 @@ if __name__ == '__main__':
                 else:
                     state = 23
 
-            # # ------------------ STATE 221: Turn to face picking station (if aisle 1 delivery) ------------------------------
-            # elif state == 221:
-            #     # bot.GetCameraImage()
-            #     has_row2 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
-            #     if has_row2:
-            #         stationBearing = math.degrees(pickingStationRB[return_index][1])
-            #         kp = 0.01
-            #         rotation_velocity = kp * stationBearing
-            #         rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
-            #         if abs(stationBearing) < 10:
-            #             bot.SetTargetVelocities(0.0, 0.0)
-            #             state = 222
-            #         else:
-            #             bot.SetTargetVelocities(0.0, rotation_velocity)
-            #     else:
-            #         bot.SetTargetVelocities(0.0, -0.2)
-
             # ------------------ STATE 222: Drive toward Picking Station with fields ------------------------------
             elif state == 222:
                 has_ps1 = (pickingStationRB and pickingStationRB[return_index] is not None and len(pickingStationRB[return_index]) > 0)
@@ -1037,24 +1020,52 @@ if __name__ == '__main__':
 
             # ------------------ STATE 23: Drive back to return zone ------------------------------
             elif state == 23:
-                target_distance = 0.53
-                error = distance - target_distance
-                
-                # proportional control
-                kp = 0.5   # <-- tune this value
-                v = kp * error
-                
-                # clamp velocity
-                v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
-                
-                bot.SetTargetVelocities(v, 0.0)
-                # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-                
-                # within tolerance
-                if abs(error) <= 0.1:  # 1 cm offset tolerance
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    print("Successful delivery!")
-                    state = 24
+                has_shelf5 = (shelfRB and shelfRB[5] is not None and len(shelfRB[5]) > 0)
+                if has_shelf5:
+                    all_obstacles = []
+                    for group in (obstaclesRB, shelfRB):
+                        if group:
+                            all_obstacles.extend(group)   # merge lists
+                    U_rep = repulsiveField(all_obstacles, phi)
+
+                    ref_bearing = shelfRB[5][1]
+                    offset_deg = 20.0
+                    offset = np.radians(offset_deg)
+                    goal_bearing = ref_bearing - offset
+                    goal_distance = shelfRB[5][0]
+                    goal = [goal_distance, goal_bearing] 
+
+                    U_att = attractiveField(goal, phi)
+                    best_bearing = bestBearing(U_att, U_rep, phi)
+
+                    if best_bearing is not None:
+                        theta = 0.0
+                        e_theta = angle_wrap(best_bearing - theta)
+
+                        k_omega = 0.4
+                        v_max = 0.1
+                        sigma = np.radians(30)
+
+                        omega = k_omega * e_theta
+                        v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                        bot.SetTargetVelocities(v, omega)
+                    else:
+                        bot.SetTargetVelocities(0.0, 0.15)
+                    
+                    if shelfRB[5][0] < 0.6:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        forward_time = time.time()
+                        state = 23.1
+                else:
+                    bot.SetTargetVelocities(0.0, 0.15)
+
+            elif state == 23.1:
+                elapsed = abs(time.time() - forward_time)
+                if elapsed < 0.65:
+                    bot.SetTargetVelocities(0.2, 0.0)
+                else: 
+                    state = 25
+
 
             # ------------------ STATE 24: Turn to face aisle ------------------------------
             elif state == 24:
