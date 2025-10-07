@@ -20,7 +20,8 @@ shelf_to_aisle = {
     "5": ["3", -np.pi/2]   
 }
 
-pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
+# pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.1}
+pickingbay_distance_wall = {"1":0.75, "2":0.45, "3":0.12}
 shelf_distance_marker = {"1":0.93, "2":0.65, "3":0.42, "4":0.15}
 aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi/2]}
 
@@ -73,15 +74,40 @@ def getMeasurements(deliveries, deliveryNo):
 # ---------------------------
 # Potential fields
 # ---------------------------
+# def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_width=0.3):
+#     U_rep = np.zeros_like(phi)
+#     if not obstacleList:
+#         return U_rep
+    
+#     for obs in obstacleList:
+#         if obs is None or len(obs) != 2:
+#             continue
+#         obs_distance, obs_bearing = obs
+#         if obs_distance <= 0 or abs(obs_bearing) > np.pi / 2:
+#             continue
+
+#         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
+#         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
+#         k_rep = 10
+
+#         # Smooth cosine decay for repulsion
+#         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
+#         U_rep[mask] = np.maximum(U_rep[mask], k_rep * decay / obs_distance**2)
+#     return U_rep
+
 def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_width=0.3):
     U_rep = np.zeros_like(phi)
     if not obstacleList:
         return U_rep
-    
+
     for obs in obstacleList:
-        if obs is None or len(obs) != 2:
+        # --- Robust sanity check ---
+        if not isinstance(obs, (list, tuple)) or len(obs) != 2:
             continue
+
         obs_distance, obs_bearing = obs
+        if not isinstance(obs_distance, (int, float)) or not isinstance(obs_bearing, (int, float)):
+            continue
         if obs_distance <= 0 or abs(obs_bearing) > np.pi / 2:
             continue
 
@@ -92,6 +118,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
         # Smooth cosine decay for repulsion
         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
         U_rep[mask] = np.maximum(U_rep[mask], k_rep * decay / obs_distance**2)
+
     return U_rep
 
 
@@ -193,9 +220,7 @@ if __name__ == '__main__':
         print("Yellow - Moving to picking station or transporting item to target bay")
 
         while True:
-            # print(state)
-            # print(state)
-            # print(state)
+            print(state)
             bot.UpdateObjectPositions()
 
             # Order here must match what GetDetectedObjects returns
@@ -209,7 +234,7 @@ if __name__ == '__main__':
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-            print(shelfRB)
+            # print(shelfRB)
             # print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
@@ -545,25 +570,7 @@ if __name__ == '__main__':
 
             #------------------ STATE 6: Drive to wall until certain distance ------------------------------
             elif state == 6:
-                # # print(packingStationRB)
-                # target_distance = pickingBayWallDistance 
-                # error = distance - target_distance
-
-                # # proportional control
-                # kp = 0.5   # tune as needed
-                # v = kp * error
-
-                # # clamp velocity so it doesn’t crawl too slowly or rush too fast
-                # v = max(min(v, 0.12), 0.03)  
-
-                # bot.SetTargetVelocities(v, 0.0)
-                # # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-
-                # # stop when within ±1 cm of 0.45 m
-                # if abs(error) <= 0.02:
-                #     bot.SetTargetVelocities(0.0, 0.0)
-                #     state = 7
-                has_shelf0 = (shelfRB and shelfRB[0] is not None and len(shelfRB[0]) > 0)
+                has_shelf0 = (shelfRB and shelfRB[0] is not None)
                 if has_shelf0:
                     all_obstacles = []
                     for group in (obstaclesRB, shelfRB):
@@ -572,7 +579,7 @@ if __name__ == '__main__':
                     U_rep = repulsiveField(all_obstacles, phi)
 
                     ref_bearing = shelfRB[0][1]
-                    offset_deg = 10.0
+                    offset_deg = 2.0
                     offset = np.radians(offset_deg)
                     goal_bearing = ref_bearing + offset
                     goal_distance = shelfRB[0][0]
@@ -594,14 +601,54 @@ if __name__ == '__main__':
                         bot.SetTargetVelocities(v, omega)
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
-
                     
+                    if  pickingBayWallDistance == pickingbay_distance_wall["3"]:
+                            state = 6.1
+                    else:
+                        if shelfRB[0][0] < pickingBayWallDistance:
+                            bot.SetTargetVelocities(0.0, 0.0)
+                            print("Green - Collecting an item at the picking station")
+                            state = 7
+                else:
+                    bot.SetTargetVelocities(0.0, 0.15)
+                
+            elif state == 6.1:
+                has_shelf0 = (shelfRB and shelfRB[0] is not None)
+                if has_shelf0:
+                    all_obstacles = []
+                    if obstaclesRB:
+                        for group in obstaclesRB:
+                            if group:
+                                all_obstacles.extend(group)
+                    U_rep = repulsiveField(all_obstacles, phi)
+
+                    goal_bearing = shelfRB[0][1]
+                    goal_distance = shelfRB[0][0]
+                    goal = [goal_distance, goal_bearing] 
+
+                    U_att = attractiveField(goal, phi)
+                    best_bearing = bestBearing(U_att, U_rep, phi)
+
+                    if best_bearing is not None:
+                        theta = 0.0
+                        e_theta = angle_wrap(best_bearing - theta)
+
+                        k_omega = 0.4
+                        v_max = 0.1
+                        sigma = np.radians(30)
+
+                        omega = k_omega * e_theta
+                        v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                        bot.SetTargetVelocities(v, omega)
+                    else:
+                        bot.SetTargetVelocities(0.0, 0.15)
+
                     if shelfRB[0][0] < pickingBayWallDistance:
                         bot.SetTargetVelocities(0.0, 0.0)
                         print("Green - Collecting an item at the picking station")
                         state = 7
                 else:
-                    bot.SetTargetVelocities(0.0, 0.15)
+                    bot.SetTargetVelocities(0.0, -0.15)
 
                 
             # ------------------ STATE 7: Turn to Picking Bay ------------------------------
@@ -772,10 +819,10 @@ if __name__ == '__main__':
 
                 if (aisle_id == '2') or (aisle_id == '3'):
                     shelf_index = 5
-                    offset_deg = -10.0
+                    offset_deg = -2.0
                 else:
                     shelf_index = 0
-                    offset_deg = 10.0
+                    offset_deg = 2.0
                 has_shelf = (shelfRB and shelfRB[shelf_index] is not None and len(shelfRB[shelf_index]) > 0)
                 if has_shelf:
                     all_obstacles = []
@@ -1065,21 +1112,43 @@ if __name__ == '__main__':
 
             # ------------------ STATE 124: Drive to front of aisle 2 for reset ------------------------------
             elif state == 124:
-                target_distance = aisle_distance_wall["2"][0]   
-                error = distance - target_distance
+                has_shelf5 = (shelfRB and shelfRB[5] is not None and len(shelfRB[5]) > 0)
+                if has_shelf5:
+                    all_obstacles = []
+                    for group in (obstaclesRB, shelfRB):
+                        if group:
+                            all_obstacles.extend(group)   # merge lists
+                    U_rep = repulsiveField(all_obstacles, phi)
 
-                kp = 0.3   # proportional gain
+                    ref_bearing = shelfRB[5][1]
+                    offset_deg = 2.0
+                    offset = np.radians(offset_deg)
+                    goal_bearing = ref_bearing - offset
+                    goal_distance = shelfRB[5][0]
+                    goal = [goal_distance, goal_bearing] 
 
-                if error-0.009 <= 0.01:  # within ±1 cm
-                    v = 0.0
-                    bot.SetTargetVelocities(0.0, 0.0)
-                    # print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
-                    state = 25
+                    U_att = attractiveField(goal, phi)
+                    best_bearing = bestBearing(U_att, U_rep, phi)
+
+                    if best_bearing is not None:
+                        theta = 0.0
+                        e_theta = angle_wrap(best_bearing - theta)
+
+                        k_omega = 0.4
+                        v_max = 0.1
+                        sigma = np.radians(30)
+
+                        omega = k_omega * e_theta
+                        v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                        bot.SetTargetVelocities(v, omega)
+                    else:
+                        bot.SetTargetVelocities(0.0, 0.15)
+                    
+                    if shelfRB[5][0] < aisle_distance_wall["2"][0]:
+                        bot.SetTargetVelocities(0.0, 0.0)
+                        state = 25
                 else:
-                    v = kp * error
-                    v = max(min(v, 0.05), -0.05)  # clamp both directions
-                    bot.SetTargetVelocities(v, 0.0)
-                    # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
+                    bot.SetTargetVelocities(0.0, 0.15)
 
             # ------------------ STATE 25: Get next delivery instructions or end ------------------------------
             elif state == 25:
