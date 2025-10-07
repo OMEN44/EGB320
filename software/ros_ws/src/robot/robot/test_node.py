@@ -101,13 +101,13 @@ class ServoTestNode(Node):
         self.get_logger().info('Servo test node started')
 
         # Initialise publisher for servo actions
-        self.servo_pub = self.create_publisher(Int8, '/servo_actions', 10)
+        self.servo_pub = self.create_publisher(Int8, '/collection_action', 10)
         # Subscribe to servo status to confirm action completion
         self.status_sub = self.create_subscription(
-            String, '/servo_status', self.status_callback, 10)
+            String, '/arm_status', self.status_callback, 10)
 
         # Command sequence and timer
-        self.commands = [5, 0, 1, 5, 0, 4, 2, 5, 0, 4, 3, 5]  # Sequence to match desired actions
+        self.commands = [1, 0, 2, 1, 0, 3, 1, 0, 4]  # Sequence to match actions
         self.current_command_index = 0
         self.last_time = time()
         self.action_completed = True
@@ -123,11 +123,12 @@ class ServoTestNode(Node):
             self.action_completed = True
 
     def timer_callback(self):
+        self.get_logger().info('Target command: {}, completed: {}'.format(self.commands[self.current_command_index], self.action_completed))
         if self.current_command_index >= len(self.commands):
             return  # Stop sending commands after sequence completes
 
         current_time = time()
-        if (current_time - self.last_time) >= 15.0 and self.action_completed:
+        if (current_time - self.last_time) >= 5.0 and self.action_completed:
             self.last_time = current_time
             self.action_completed = False
 
@@ -137,12 +138,12 @@ class ServoTestNode(Node):
             msg.data = command
             self.servo_pub.publish(msg)
             action = {
-                0: "Floor Level",
-                1: "Bottom Shelf",
-                2: "Middle Shelf",
-                3: "Top Shelf",
-                4: "Close Gripper",
-                5: "Open Gripper"
+                0: "Idle Position",
+                1: "Floor Level",
+                2: "Bottom Shelf",
+                3: "Middle Shelf",
+                4: "Top Shelf",
+
             }.get(command, "Unknown")
             self.get_logger().info(f'Publishing servo command: {command} ({action})')
 
