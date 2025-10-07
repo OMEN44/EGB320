@@ -600,7 +600,7 @@ if __name__ == '__main__':
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
                     else:
-                        bot.SetTargetVelocities(0.0, 0.15)
+                        bot.SetTargetVelocities(0.0, -0.15)
                     
                     if  pickingBayWallDistance == pickingbay_distance_wall["3"]:
                             state = 6.1
@@ -796,33 +796,14 @@ if __name__ == '__main__':
             
             # ------------------ STATE 14: Drive to wall until certain distance (front of desired aisle) ------------------------------
             elif state == 14:
-                # target_distance = aisleWallDistance
-                # error = distance - target_distance
-                
-                # # proportional control
-                # kp = 0.5   # <-- tune this value
-                # v = kp * error
-                
-                # # clamp velocity
-                # v = max(min(v, 0.15), 0.03)  # between 0.03 and 0.15 m/s
-                
-                # bot.SetTargetVelocities(v, 0.0)
-                # # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-                
-                # # within tolerance
-                # if abs(error) <= 0.07:  # 1 cm offset tolerance
-                #     bot.SetTargetVelocities(0.0, 0.0)
-                #     state = 15
-                # if (aisle_id == "1"):
-                #     if distance < aisleWallDistance:
-                #         state = 14.5
-
                 if (aisle_id == '2') or (aisle_id == '3'):
                     shelf_index = 5
                     offset_deg = -2.0
+                    search_turn_speed = 0.15
                 else:
                     shelf_index = 0
                     offset_deg = 2.0
+                    search_turn_speed = -0.15
                 has_shelf = (shelfRB and shelfRB[shelf_index] is not None and len(shelfRB[shelf_index]) > 0)
                 if has_shelf:
                     all_obstacles = []
@@ -859,7 +840,7 @@ if __name__ == '__main__':
                         print("Green - Collecting an item at the picking station")
                         state = 14.5
                 else:
-                    bot.SetTargetVelocities(0.0, 0.15)
+                    bot.SetTargetVelocities(0.0, search_turn_speed)
 
 
 
