@@ -240,7 +240,7 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
             self.send_vision_data("isleMarkers,shelves,pickingStation", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
-            self.shelves = self.filter_poi("shelf")
+            self.shelves = self.filter_poi("shelves")
             self.picking_stations = self.filter_poi("pickingStations")
 
             if len(self.aisle_markers) != 0:
@@ -438,37 +438,55 @@ class Navigation(Node):
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
             # --- 1. Sensor reads ---
             current_distance = self.tof_distance  # Time-of-Flight sensor
-            imu_yaw = self.imu_yaw                # Robot IMU yaw (rad)
-            all_obstacles = []
+            target_distance = picking_bay_wall_distance  
+            error = current_distance - target_distance
 
-            for group in (self.obstacles, self.shelves):
-                if group:
-                    all_obstacles.extend(group)
+            # proportional control
+            kp = 0.5   # tune as needed
+            v = kp * error
 
-            # --- 2. Determine reference bearing ---
-            # Select shelf or picking bay bearings (whichever is detected)
-            bearings = []
-            # if self.shelves:
-            #     bearings.extend([b for _, b in self.shelfRB])
-            if self.picking_stations:
-                bearings.extend([b for _, b in self.picking_stations])
+            # clamp velocity so it doesn’t crawl too slowly or rush too fast
+            v = max(min(v, 0.12), 0.03)  
 
-                ref_bearing = max(bearings)  # rightmost
+            self.publish_velocity(v, 0.0)
+            # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
 
-                # Offset the bearing by a few degrees (adjust sign & value as needed)
-                offset_deg = 10.0
-                offset = np.radians(offset_deg)
-                goal_bearing = ref_bearing + offset
+            # stop when within ±1 cm of 0.45 m
+            if abs(error) <= 0.02:
+                self.publish_velocity(0.0, 0.0)
+                self.state = 'TURN_TO_PICKING_BAY'
+
+
+            # all_obstacles = []
+
+            # for group in (self.obstacles, self.shelves):
+            #     if group:
+            #         all_obstacles.extend(group)
+
+            # # --- 2. Determine reference bearing ---
+            # # Select shelf or picking bay bearings (whichever is detected)
+            # bearings = []
+            # # if self.shelves:
+            # #     bearings.extend([b for _, b in self.shelfRB])
+            # if self.picking_stations:
+            #     bearings.extend([b for _, b in self.picking_stations])
+
+            #     ref_bearing = max(bearings)  # rightmost
+
+            #     # Offset the bearing by a few degrees (adjust sign & value as needed)
+            #     offset_deg = 10.0
+            #     offset = np.radians(offset_deg)
+            #     goal_bearing = ref_bearing + offset
             
-            else:
-                # Fallback: straight ahead
-                goal_bearing = imu_yaw
+            # else:
+            #     # Fallback: straight ahead
+            #     goal_bearing = imu_yaw
 
-            # --- 3. Attractive field goal (bearing only) ---
-            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
-            goal = [goal_distance, goal_bearing]
+            # # --- 3. Attractive field goal (bearing only) ---
+            # goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
+            # goal = [goal_distance, goal_bearing]
 
-            self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_TO_PICKING_BAY')
+            # self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_TO_PICKING_BAY')
 
         elif self.state == 'TURN_TO_PICKING_BAY':
             turn_speed = 0.14
