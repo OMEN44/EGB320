@@ -532,7 +532,7 @@ class Navigation(Node):
             self.state = 'COLLECT_ITEM'
         
         elif self.state == 'COLLECT_ITEM':          
-            self.publish_collection(1) # Command to collect for arm (IT IS 1??)
+            self.publish_collection(1) # Command to collect for arm (IT IS 1??) - yeah
             if self.arm_status == True: # Assuming arm_status is updated via a subscriber
                 self.state = 'TURN_TOWARDS_AISLE'
         
