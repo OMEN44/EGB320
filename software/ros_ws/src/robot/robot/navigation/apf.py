@@ -4,7 +4,7 @@ obstacle_width = 0.15  # meters
 # ---------------------------
 # Potential fields
 # ---------------------------
-def repulsiveField(self, obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
+def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
     U_rep = np.zeros_like(phi)
     if not obstacleList:
         return U_rep
@@ -16,10 +16,12 @@ def repulsiveField(self, obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         if obs_distance <= 0 or abs(obs_bearing) > np.pi/2:
             continue
 
-        dphi = np.arcsin((obstacle_width/2) / obs_distance) if obs_distance > (obstacle_width/2) else np.pi/2
+        dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi/2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        U_rep[mask] = np.maximum(U_rep[mask], (1.0 / obs_distance))
+        k_rep = 10  # or higher
+        U_rep[mask] = np.maximum(U_rep[mask], k_rep / obs_distance)
     return U_rep
+
 
 def attractiveField(self,target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
     if target is None:
