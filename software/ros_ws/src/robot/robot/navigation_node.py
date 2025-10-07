@@ -246,7 +246,7 @@ class Navigation(Node):
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
                 for i, marker in enumerate(self.aisle_markers):
-                    if marker is not None:
+                    if marker.exists is True:
                         self.row_index = i  # or whichever field you need
                 self.state = 'CALIBRATION_AISLE_MARKER'
 
@@ -269,7 +269,7 @@ class Navigation(Node):
 
             # Look for Bay 1 marker
             target_marker = None
-            if self.picking_stations[0] is not None:
+            if self.picking_stations[0].exists is True:
                 target_marker = self.picking_stations[0]
 
             # Move using APF and switch state when target distance reached
@@ -283,7 +283,7 @@ class Navigation(Node):
             self.aisle_markers = self.filter_poi("isleMarkers")
 
             target_marker = None
-            if self.aisle_markers[1] is not None:  # data = 1 means Bay 1 marker
+            if self.aisle_markers[1].exists is True:  # data = 1 means Bay 1 marker
                     target_marker = self.aisle_markers[1]
                     self.publish_velocity(0.0, calibration_turn_speed)
 
@@ -308,7 +308,7 @@ class Navigation(Node):
 
                 # Take first aisle marker as target
                 for i, marker in enumerate(self.aisle_markers):
-                    if self.aisle_markers[i] is not None:
+                    if self.aisle_markers[i].exists is True:
                         aisle_index = i
                         break
                 
@@ -326,7 +326,7 @@ class Navigation(Node):
 
             # Look for marker #1
             target_marker = None
-            if self.picking_stations[0] is not None:  # data = 1 means Bay 1 marker
+            if self.picking_stations[0].exists is True:  # data = 1 means Bay 1 marker
                 target_marker = self.picking_stations[0]
                 self.publish_velocity(0.0, calibration_turn_speed)
 
@@ -355,7 +355,7 @@ class Navigation(Node):
 
             # Look for marker #2
             target_marker = None
-            if self.picking_stations[1] is not None:  # data = 2 means Bay 2 marker
+            if self.picking_stations[1].exists is True:  # data = 2 means Bay 2 marker
                 target_marker = self.picking_stations[1]
                 self.publish_velocity(0.0, calibration_turn_speed)
 
@@ -542,7 +542,7 @@ class Navigation(Node):
             self.aisle_markers = self.filter_poi("isleMarkers")
             if len(self.aisle_markers) != 0:
                 for i, marker in enumerate(self.aisle_markers):
-                    if marker is not None:
+                    if marker.exists is True:
                         marker_index = i
                         break
 
@@ -613,7 +613,7 @@ class Navigation(Node):
 
             
             target_marker = None
-            if self.aisle_markers[aisle_id] is not None:
+            if self.aisle_markers[aisle_id].exists is True:
                 target_marker = self.aisle_markers[aisle_id]
                 # Keep turning until marker found
             else:
@@ -640,7 +640,7 @@ class Navigation(Node):
             self.obstacles = self.filter_poi("obstacle")
 
             # Look for target aisle marker
-            if self.aisle_markers[aisle_id] is not None:
+            if self.aisle_markers[aisle_id].exist is True:
                 target_marker = self.aisle_markers[aisle_id]                
             else:
                 self.publish_velocity(0.0, turn_speed)
