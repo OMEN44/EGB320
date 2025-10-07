@@ -240,7 +240,7 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
             self.send_vision_data("isleMarkers,shelves,pickingStation", "")
             self.aisle_markers = self.filter_poi("isleMarkers")
-            self.shelves = self.filter_poi("shelf")
+            self.shelves = self.filter_poi("shelves")
             self.picking_stations = self.filter_poi("pickingStations")
 
             if len(self.aisle_markers) != 0:

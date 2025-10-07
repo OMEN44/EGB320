@@ -73,7 +73,7 @@ def getMeasurements(deliveries, deliveryNo):
 # ---------------------------
 # Potential fields
 # ---------------------------
-def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
+def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_width=0.3):
     U_rep = np.zeros_like(phi)
     if not obstacleList:
         return U_rep
@@ -82,14 +82,18 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         if obs is None or len(obs) != 2:
             continue
         obs_distance, obs_bearing = obs
-        if obs_distance <= 0 or abs(obs_bearing) > np.pi/2:
+        if obs_distance <= 0 or abs(obs_bearing) > np.pi / 2:
             continue
 
-        dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi/2
+        dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        k_rep = 10  # or higher
-        U_rep[mask] = np.maximum(U_rep[mask], k_rep / obs_distance)
+        k_rep = 10
+
+        # Smooth cosine decay for repulsion
+        decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
+        U_rep[mask] = np.maximum(U_rep[mask], k_rep * decay / obs_distance**2)
     return U_rep
+
 
 
 # Attractive field towards target
@@ -205,8 +209,8 @@ if __name__ == '__main__':
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-            print(shelfRB)
-            # print(packingStationRB)
+            # print(shelfRB)
+            print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1
