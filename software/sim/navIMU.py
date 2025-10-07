@@ -209,8 +209,8 @@ if __name__ == '__main__':
             ])
             itemsRB, packingStationRB, obstaclesRB, rowMarkerRB, shelfRB, pickingStationRB = objectsRB
             res, distance, point, obj, n = bot.sim.readProximitySensor(bot.proximityHandle)
-            # print(shelfRB)
-            print(packingStationRB)
+            print(shelfRB)
+            # print(packingStationRB)
             if state == -0.1:
                 startIMU = bot.robotPose[5]
                 state = -1

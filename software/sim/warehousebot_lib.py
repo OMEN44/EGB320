@@ -1594,10 +1594,17 @@ class COPPELIA_WarehouseRobot(object):
 			if shelf_handle is not None:
 				try:
 					# Get the shelf position
+					# shelf_position = self.sim.getObjectPosition(shelf_handle, -1) # ORIGINAL LINE
 					shelf_position = self.sim.getObjectPosition(shelf_handle, -1)
+					# Apply world −X offset directly
+					shelf_edge_position = [shelf_position[0]-0.6, shelf_position[1], shelf_position[2]]
+
+					_range, _bearing = self.GetRangeAndBearingFromPoseAndPoint(cameraPose2D, shelf_edge_position)
+
+
 					
-					# Calculate range and bearing from camera to shelf
-					_range, _bearing = self.GetRangeAndBearingFromPoseAndPoint(cameraPose2D, shelf_position)
+					# Calculate range .ad bearing from camera to shelf
+					# _range, _bearing = self.GetRangeAndBearingFromPoseAndPoint(cameraPose2D, shelf_position)
 					
 					# Check if shelf is within detection range and field of view
 					if _range < self.robotParameters.maxShelfDetectionDistance:
