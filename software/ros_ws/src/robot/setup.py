@@ -22,11 +22,12 @@ setup(
         'console_scripts': [
             'vision = robot.vision_node:main',
             'navigation = robot.navigation_node:main',
-            'navtest = robot.nav_test:main',
             'mobility = robot.mobility_node:main',
             'collection = robot.collection_node:main',
             'test = robot.test_node:main',
-            'straight = robot.drive_straight:main'
+            'ramp = robot.drive_straight:main',
+            'speed = robot.nav_test:main', 
+            'turn = robot.turn_test:main'
         ],
     },
 )

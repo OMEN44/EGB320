@@ -152,13 +152,11 @@ class Navigation(Node):
 
         # ----------- SEQUENCE CONTROL -----------
         if self.state == 'TURN_CALIBRATION':
-            # Phase 1: Drive forward 3 seconds
-            # if elapsed < 5.0:
-            #     self.publish_velocity(0.2, 0.0)
-            # Phase 2: Turn left for 2 seconds
-            # if elapsed < 5.0:
-            #     self.publish_velocity(0.0, 0.6)
-            # Phase 3: Drive forward again for 3 seconds
+            speed = 0.08 # change this to change speed
+            # 0.08 in code was 0.001 m/s in real life
+            # 0.3 in code was 0.6 m/s in real life
+            if elapsed < 5.0:
+                self.publish_velocity(speed, 0.0) 
             else:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'SEQUENCE_COMPLETE'
