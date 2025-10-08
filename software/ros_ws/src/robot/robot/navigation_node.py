@@ -46,7 +46,7 @@ class Navigation(Node):
         self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
         # State machine variables
-        self.state = 'TURN_CALIBRATION'
+        self.state = 'START'
         self.current_heading = 0.0
         self.target_heading = 0.0
 
@@ -65,6 +65,14 @@ class Navigation(Node):
         self.arm_status = False  
 
         self.zone_dist_aisle_marker = 1.24
+
+        self.picking_bay_index = None
+        self.aisle_id = None
+        self.picking_bay_wall_distance = None
+        self.aisle_wall_distance = None
+        self.shelf_marker_distance = None
+        self.shelf_orientation = None
+        self.aisle_orientation = None
 
         self.deliveries = []
         for picking_bay in [1, 2, 3]:
@@ -217,7 +225,7 @@ class Navigation(Node):
         self.items = self.pois["items"]
         self.obstacles = self.pois["obstacles"]
         self.aisle_markers = self.pois["islemarkers"]
-        self.picking_stations = self.pois["pickingstations"]
+        self.picking_stations = self.pois["pickingStations"]
 
 
     # ---------------- STATE MACHINE --------------
@@ -230,34 +238,106 @@ class Navigation(Node):
         shelf_orientation = None
         aisle_orientation = None
         self.get_logger().info(self.state)
-        
-        # print(self.state)
-        # if self.state == 'START':
-        #     self.aisle_index, self.shelfMarkerDistance, self.shelfOrientation = self.get_measurements(shelfID)
-        #     self.get_logger().info(f"Target shelf {shelfID}, aisle {self.aisle_index+1}")
-        #     self.state = 'TURN_CALIBRATION'
+        if self.state == 'START':
+            self.picking_bay_index, self.aisle_id, self.picking_bay_wall_distance, self.aisle_wall_distance, self.shelf_marker_distance, self.shelf_orientation, self.aisle_orientation = self.get_measurements(self.deliveries, self.deliveryNo)
+            self.state = 'TURN_CALIBRATION'
 
-        if self.state == 'TURN_CALIBRATION':
+        elif self.state == 'TURN_CALIBRATION':
             calibration_turn_speed = 0.14
-            self.send_vision_data("isleMarkers,shelves,pickingStation", "")
 
-            if len(self.aisle_markers) != 0:
-                self.publish_velocity(0.0, 0.0)
-                for i, marker in enumerate(self.aisle_markers):
-                    if marker.exists is True:
-                        self.row_index = i  # or whichever field you need
-                self.state = 'CALIBRATION_AISLE_MARKER'
+            # Initialize variables once
+            if not hasattr(self, 'calibration_complete'):
+                self.calibration_complete = False
+                self.rotation_start_yaw = imu.get_yaw()  # store starting angle
+                self.rotation_accumulated = 0.0
+                self.last_yaw = self.rotation_start_yaw
 
-            elif len(self.picking_stations) != 0:
-                self.publish_velocity(0.0, 0.0)
-                self.state = 'CALIBRATION_PICKING_STATION'
+            # Continuously update yaw info
+            current_yaw = imu.get_yaw()
+            delta_yaw = (current_yaw - self.last_yaw + np.pi) % (2 * np.pi) - np.pi  # shortest signed diff
+            self.rotation_accumulated += abs(delta_yaw)
+            self.last_yaw = current_yaw
 
-            elif len(self.shelves) != 0:
-                self.publish_velocity(0.0, 0.0)
-                self.state = 'CALIBRATION_SHELF'
+            # Always gather vision data
+            self.send_vision_data("isleMarkers,pickingStations,shelves", "")
+            self.get_arrays()
 
+            # ---------------------------
+            # Phase 1: First 360° — look only for aisle/picking markers
+            # ---------------------------
+            if not self.calibration_complete:
+                self.publish_velocity(0.0, calibration_turn_speed)
+
+                if len(self.aisle_markers) != 0:
+                    self.publish_velocity(0.0, 0.0)
+                    for i, marker in enumerate(self.aisle_markers):
+                        if marker.exists is True:
+                            self.row_index = i
+                    self.state = 'CALIBRATION_AISLE_MARKER'
+
+                elif len(self.picking_stations) != 0:
+                    self.publish_velocity(0.0, 0.0)
+                    self.state = 'CALIBRATION_PICKING_STATION'
+
+                # Check if full rotation done
+                elif self.rotation_accumulated >= 2 * np.pi:
+                    self.publish_velocity(0.0, 0.0)
+                    self.calibration_complete = True
+                    self.rotation_start_yaw = imu.get_yaw()
+                    self.rotation_accumulated = 0.0
+                    self.last_yaw = self.rotation_start_yaw
+
+            # ---------------------------
+            # Phase 2: Second 360° — now include shelves
+            # ---------------------------
             else:
                 self.publish_velocity(0.0, calibration_turn_speed)
+
+                if len(self.aisle_markers) != 0:
+                    self.publish_velocity(0.0, 0.0)
+                    for i, marker in enumerate(self.aisle_markers):
+                        if marker.exists is True:
+                            self.row_index = i
+                    self.state = 'CALIBRATION_AISLE_MARKER'
+
+                elif len(self.picking_stations) != 0:
+                    self.publish_velocity(0.0, 0.0)
+                    self.state = 'CALIBRATION_PICKING_STATION'
+
+                elif len(self.shelves) != 0:
+                    self.publish_velocity(0.0, 0.0)
+                    self.state = 'CALIBRATION_SHELF'
+
+                # Optional: Stop if full rotation done and still found nothing
+                elif self.rotation_accumulated >= 2 * np.pi:
+                    self.publish_velocity(0.0, 0.0)
+                    self.get_logger().info("No markers or shelves found after full rotation.")
+                    # self.state = 'IDLE' or 'SEARCH_FAIL' or whatever your next fallback state is
+
+
+        # if self.state == 'TURN_CALIBRATION':
+        #     calibration_turn_speed = 0.14
+        #     self.send_vision_data("isleMarkers,shelves,pickingStations", "")
+        #     self.get_arrays()
+
+
+        #     if len(self.aisle_markers) != 0:
+        #         self.publish_velocity(0.0, 0.0)
+        #         for i, marker in enumerate(self.aisle_markers):
+        #             if marker.exists is True:
+        #                 self.row_index = i  # or whichever field you need
+        #         self.state = 'CALIBRATION_AISLE_MARKER'
+
+        #     elif len(self.picking_stations) != 0:
+        #         self.publish_velocity(0.0, 0.0)
+        #         self.state = 'CALIBRATION_PICKING_STATION'
+
+        #     elif len(self.shelves) != 0:
+        #         self.publish_velocity(0.0, 0.0)
+        #         self.state = 'CALIBRATION_SHELF'
+
+        #     else:
+        #         self.publish_velocity(0.0, calibration_turn_speed)
 
         elif self.state == 'CALIBRATION_PICKING_STATION':
             self.send_vision_data("pickingStation,obstacles,shelves", "")
@@ -605,7 +685,7 @@ class Navigation(Node):
             self.get_arrays()
 
             # Look for target aisle marker
-            if self.aisle_markers[aisle_id].exist is True:
+            if self.aisle_markers[aisle_id].exists is True:
                 target_marker = self.aisle_markers[aisle_id]                
             else:
                 self.publish_velocity(0.0, turn_speed)
