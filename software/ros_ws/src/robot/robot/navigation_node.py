@@ -211,7 +211,13 @@ class Navigation(Node):
             self.publish_velocity(0.0, 0.0)
             self.state = next_state
             self.get_logger().info(f"Reached target marker. Switching to {next_state}.")
-
+            
+    def get_arrays(self):
+        self.shelves = self.pois["shelves"]
+        self.items = self.pois["items"]
+        self.obstacles = self.pois["obstacles"]
+        self.aisle_markers = self.pois["islemarkers"]
+        self.picking_stations = self.pois["pickingstations"]
 
 
     # ---------------- STATE MACHINE --------------
@@ -224,11 +230,6 @@ class Navigation(Node):
         shelf_orientation = None
         aisle_orientation = None
         self.get_logger().info(self.state)
-        self.shelves = self.pois["shelves"]
-        self.items = self.pois["items"]
-        self.obstacles = self.pois["obstacles"]
-        self.aisle_markers = self.pois["islemarkers"]
-        self.picking_stations = self.pois["pickingstations"]
         
         # print(self.state)
         # if self.state == 'START':
@@ -239,9 +240,6 @@ class Navigation(Node):
         if self.state == 'TURN_CALIBRATION':
             calibration_turn_speed = 0.14
             self.send_vision_data("isleMarkers,shelves,pickingStation", "")
-            self.aisle_markers = self.filter_poi("isleMarkers")
-            self.shelves = self.filter_poi("shelves")
-            self.picking_stations = self.filter_poi("pickingStations")
 
             if len(self.aisle_markers) != 0:
                 self.publish_velocity(0.0, 0.0)
@@ -263,9 +261,7 @@ class Navigation(Node):
 
         elif self.state == 'CALIBRATION_PICKING_STATION':
             self.send_vision_data("pickingStation,obstacles,shelves", "")
-            self.obstacles = self.filter_poi("obstacle")
-            self.shelves = self.filter_poi("shelf")
-            self.picking_stations = self.filter_poi("pickingStation")
+            self.get_arrays()
 
             # Look for Bay 1 marker
             target_marker = None
@@ -280,8 +276,7 @@ class Navigation(Node):
 
             # Ask vision for picking stations
             self.send_vision_data("isleMarkers", "")
-            self.aisle_markers = self.filter_poi("isleMarkers")
-
+            self.get_arrays()   
             target_marker = None
             if self.aisle_markers[1].exists is True:  # data = 1 means Bay 1 marker
                     target_marker = self.aisle_markers[1]
@@ -302,9 +297,7 @@ class Navigation(Node):
 
         elif self.state == 'CALIBRATION_AISLE_MARKER':
                 self.send_vision_data("isleMarkers,shelves,obstacles", "")
-                self.obstacles = self.filter_poi("obstacle")
-                self.aisle_markers = self.filter_poi("isleMarkers")
-                self.shelves = self.filter_poi("shelf")
+                self.get_arrays()
 
                 # Take first aisle marker as target
                 for i, marker in enumerate(self.aisle_markers):
@@ -322,8 +315,7 @@ class Navigation(Node):
 
             # Ask vision for picking stations
             self.send_vision_data("pickingStation", "")
-            self.picking_stations = self.filter_poi("pickingStation")
-
+            self.get_arrays()   
             # Look for marker #1
             target_marker = None
             if self.picking_stations[0].exists is True:  # data = 1 means Bay 1 marker
@@ -351,8 +343,7 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
 
             self.send_vision_data("pickingStation", "")
-            self.picking_stations = self.filter_poi("pickingStations")
-
+            self.get_arrays()
             # Look for marker #2
             target_marker = None
             if self.picking_stations[1].exists is True:  # data = 2 means Bay 2 marker
@@ -390,13 +381,13 @@ class Navigation(Node):
 
             # Use IMU to calibrate aisle orientation
             currentIMU = imu.getYaw()  # <-- replace with your IMU API
-            self.aisleIMU = currentIMU - angleD - np.pi/2
+            self.aisle_IMU = currentIMU - angleD - np.pi/2
 
             self.get_logger().info(f"Aisle IMU calibrated to {math.degrees(self.aisleIMU):.2f}°")
             self.state = 'TURN_READY_TO_PICK_UP'  # Move on to nav logic
         
         elif self.state == 'TURN_READY_TO_PICK_UP':
-            target_heading = self.aisleIMU + math.pi/2
+            target_heading = self.aisle_IMU + math.pi/2
             current_heading = imu.getYaw()  # <-- replace with your IMU API
             e_theta = apf.angle_wrap(target_heading - current_heading)
             kp = 0.5  # Adjust gain as needed
@@ -414,26 +405,6 @@ class Navigation(Node):
         elif self.state == 'GET_DELIVERY_DATA':
             picking_bay_index, aisle_id, picking_bay_wall_distance, aisle_wall_distance, shelf_marker_distance, shelf_orientation, aisle_orientation = self.get_delivery_measurements(self.deliveries, self.delivery_no)
             self.state = 'DRIVE_TO_FRONT_OF_PICKING_STATION'
-
-        # elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
-        #     current_distance = None # Get TIME OF FLIGHT SENSOR WORKING
-        #     target_distance = picking_bay_wall_distance 
-        #     error = current_distance - target_distance
-
-        #     # proportional control
-        #     kp = 0.5   # tune as needed
-        #     v = kp * error
-
-        #     # clamp velocity so it doesn’t crawl too slowly or rush too fast
-        #     v = max(min(v, 0.12), 0.03)  
-
-        #     self.publish_velocity(v, 0.0)
-        #     # print(f"Distance: {distance:.3f}, Error: {error:.3f}, v: {v:.3f}")
-
-        #     # stop when within ±1 cm of 0.45 m
-        #     if abs(error) <= 0.02:
-        #         self.publish_velocity(0.0, 0.0)
-        #         self.state = 'TURN_TO_PICKING_BAY'
 
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
             # --- 1. Sensor reads ---
@@ -491,8 +462,7 @@ class Navigation(Node):
         elif self.state == 'TURN_TO_PICKING_BAY':
             turn_speed = 0.14
             self.send_vision_data("pickingStation", "")
-            self.picking_stations = self.filter_poi("pickingStation")
-
+            self.get_arrays()
             # Look for marker #1
             target_marker = None
             if self.picking_stations[picking_bay_index]:
@@ -515,8 +485,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_UP_PICKING_STATION':
             self.send_vision_data("pickingStation,obstacles", "")
-            self.obstacles = self.filter_poi("obstacle")
-            self.picking_stations = self.filter_poi("pickingStation")
+            self.get_arrays()
 
             # Look for current picking bay
             target_marker = None
@@ -560,9 +529,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_OFF_PICKING_STATION':
             self.send_vision_data("isleMarkers,shelves,obstacles", "")
-            self.obstacles = self.filter_poi("obstacle")
-            self.aisle_markers = self.filter_poi("isleMarkers")
-            self.shelves = self.filter_poi("shelf")
+            self.get_arrays()
 
             # Take first aisle marker as target
             target_marker = self.aisle_markers[marker_index] if len(self.aisle_markers) > 0 else None
@@ -571,7 +538,7 @@ class Navigation(Node):
             self.move_to_marker_apf(target_marker, target_distance=self.zone_dist_aisle_marker, next_state='TURN_TO_SHELF_DIR')
 
         elif self.state == 'TURN_TO_SHELF_DIR':
-            target_heading = self.aisleIMU + aisle_orientation
+            target_heading = self.aisle_IMU + aisle_orientation
             current_heading = imu.getYaw()  # <-- replace with your IMU API
             e_theta = apf.angle_wrap(target_heading - current_heading)
             kp = 0.5  # Adjust gain as needed
@@ -609,7 +576,7 @@ class Navigation(Node):
         elif self.state == 'TURN_TO_DESIRED_AISLE':
             turn_speed = 0.14
             self.send_vision_data("islemarkers", "")
-            self.aisle_markers = self.filter_poi("isleMarkers")
+            self.get_arrays()
 
             
             target_marker = None
@@ -635,9 +602,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_INTO_AISLE':
             self.send_vision_data("isleMarkers,shelves,obstacles", "")
-            self.aisle_markers = self.filter_poi("isleMarkers")
-            self.shelves = self.filter_poi("shelf")
-            self.obstacles = self.filter_poi("obstacle")
+            self.get_arrays()
 
             # Look for target aisle marker
             if self.aisle_markers[aisle_id].exist is True:
@@ -662,7 +627,7 @@ class Navigation(Node):
 
 
         elif self.state == 'TURN_TO_SHELF':
-            target_heading = self.aisleIMU + shelf_orientation
+            target_heading = self.aisle_IMU + shelf_orientation
             current_heading = imu.getYaw()  # <-- replace with your IMU API
             e_theta = apf.angle_wrap(target_heading - current_heading)
             kp = 0.5  # Adjust gain as needed
