@@ -37,11 +37,6 @@ for picking_bay in [1, 2, 3]:
 # Unpack into individual variables
 delivery_one, delivery_two, delivery_three = deliveries
 
-print(deliveries)
-
-# Example deliveries: (picking bay number, shelf id)
-deliveries = [(1, 5.4), (2, 0.3), (3, 5.4)]
-
 deliveryNo = 0
 
 # --- place once, outside main loop ---
@@ -220,7 +215,7 @@ if __name__ == '__main__':
         print("Yellow - Moving to picking station or transporting item to target bay")
 
         while True:
-            print(state)
+            # print(state)
             bot.UpdateObjectPositions()
 
             # Order here must match what GetDetectedObjects returns
