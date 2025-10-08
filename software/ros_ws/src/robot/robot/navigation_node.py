@@ -56,7 +56,9 @@ class Navigation(Node):
         self.items = []
         self.obstacles = []
         self.aisle_markers = []
-        self.picking_stations = []
+        self.picking_station = []
+        self.picking_markers = []
+
 
         self.pois = []
 
@@ -73,6 +75,8 @@ class Navigation(Node):
         self.shelf_marker_distance = None
         self.shelf_orientation = None
         self.aisle_orientation = None
+
+        self.picking_marker_index = None
 
         self.deliveries = []
         for picking_bay in [1, 2, 3]:
@@ -224,8 +228,9 @@ class Navigation(Node):
         self.shelves = self.pois["shelves"]
         self.items = self.pois["items"]
         self.obstacles = self.pois["obstacles"]
-        self.aisle_markers = self.pois["islemarkers"]
-        self.picking_stations = self.pois["pickingStations"]
+        self.aisle_markers = self.pois["aislemMarkers"]
+        self.picking_station = self.pois["pickingStation"]
+        self.picking_markers = self.pois["pickingMarkers"]
 
 
     # ---------------- STATE MACHINE --------------
@@ -259,7 +264,7 @@ class Navigation(Node):
             self.last_yaw = current_yaw
 
             # Always gather vision data
-            self.send_vision_data("isleMarkers,pickingStations,shelves", "")
+            self.send_vision_data("aisleMarkers,pickingMarkers,shelves", "")
             self.get_arrays()
 
             # ---------------------------
@@ -275,8 +280,11 @@ class Navigation(Node):
                             self.row_index = i
                     self.state = 'CALIBRATION_AISLE_MARKER'
 
-                elif len(self.picking_stations) != 0:
+                elif len(self.picking_markers) != 0:
                     self.publish_velocity(0.0, 0.0)
+                    for i, marker in enumerate(self.picking_markers):
+                        if marker.exists is True:
+                            self.picking_marker_index = i
                     self.state = 'CALIBRATION_PICKING_STATION'
 
                 # Check if full rotation done
@@ -300,8 +308,11 @@ class Navigation(Node):
                             self.row_index = i
                     self.state = 'CALIBRATION_AISLE_MARKER'
 
-                elif len(self.picking_stations) != 0:
+                elif len(self.picking_markers) != 0:
                     self.publish_velocity(0.0, 0.0)
+                    for i, marker in enumerate(self.picking_markers):
+                        if marker.exists is True:
+                            self.picking_marker_index = i
                     self.state = 'CALIBRATION_PICKING_STATION'
 
                 elif len(self.shelves) != 0:
@@ -340,13 +351,13 @@ class Navigation(Node):
         #         self.publish_velocity(0.0, calibration_turn_speed)
 
         elif self.state == 'CALIBRATION_PICKING_STATION':
-            self.send_vision_data("pickingStation,obstacles,shelves", "")
+            self.send_vision_data("pickingMarkers,obstacles,shelves", "")
             self.get_arrays()
 
             # Look for Bay 1 marker
             target_marker = None
-            if self.picking_stations[0].exists is True:
-                target_marker = self.picking_stations[0]
+            if self.picking_markers[self.picking_marker_index].exists is True:
+                target_marker = self.picking_markers[self.picking_marker_index]
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(target_marker, target_distance=0.5, next_state='TURN_TO_AISLE_2')
@@ -355,7 +366,7 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
 
             # Ask vision for picking stations
-            self.send_vision_data("isleMarkers", "")
+            self.send_vision_data("aisleMarkers", "")
             self.get_arrays()   
             target_marker = None
             if self.aisle_markers[1].exists is True:  # data = 1 means Bay 1 marker
@@ -376,7 +387,7 @@ class Navigation(Node):
                 self.publish_velocity(0.0, rotation_velocity)
 
         elif self.state == 'CALIBRATION_AISLE_MARKER':
-                self.send_vision_data("isleMarkers,shelves,obstacles", "")
+                self.send_vision_data("aisleMarkers,shelves,obstacles", "")
                 self.get_arrays()
 
                 # Take first aisle marker as target
@@ -394,12 +405,12 @@ class Navigation(Node):
             calibration_turn_speed = 0.14
 
             # Ask vision for picking stations
-            self.send_vision_data("pickingStation", "")
+            self.send_vision_data("pickingMarkers", "")
             self.get_arrays()   
             # Look for marker #1
             target_marker = None
-            if self.picking_stations[0].exists is True:  # data = 1 means Bay 1 marker
-                target_marker = self.picking_stations[0]
+            if self.picking_markers[0].exists is True:  # data = 1 means Bay 1 marker
+                target_marker = self.picking_markers[0]
                 self.publish_velocity(0.0, calibration_turn_speed)
 
             # Align with centre bearing
@@ -422,12 +433,12 @@ class Navigation(Node):
         elif self.state == 'FIND_PICKING_BAY2':
             calibration_turn_speed = 0.14
 
-            self.send_vision_data("pickingStation", "")
+            self.send_vision_data("pickingMarkers", "")
             self.get_arrays()
             # Look for marker #2
             target_marker = None
-            if self.picking_stations[1].exists is True:  # data = 2 means Bay 2 marker
-                target_marker = self.picking_stations[1]
+            if self.picking_markers[1].exists is True:  # data = 2 means Bay 2 marker
+                target_marker = self.picking_markers[1]
                 self.publish_velocity(0.0, calibration_turn_speed)
 
             centre_bearing = target_marker[1][1]
@@ -541,12 +552,12 @@ class Navigation(Node):
 
         elif self.state == 'TURN_TO_PICKING_BAY':
             turn_speed = 0.14
-            self.send_vision_data("pickingStation", "")
+            self.send_vision_data("pickingMarkers", "")
             self.get_arrays()
             # Look for marker #1
             target_marker = None
-            if self.picking_stations[picking_bay_index]:
-                target_marker = self.picking_stations[picking_bay_index]
+            if self.picking_markers[picking_bay_index]:
+                target_marker = self.picking_markers[picking_bay_index]
                 # Keep turning until marker found
             else:
                 self.publish_velocity(0.0, turn_speed)
@@ -564,13 +575,13 @@ class Navigation(Node):
                 self.publish_velocity(0.0, rotation_velocity)
 
         elif self.state == 'DRIVE_UP_PICKING_STATION':
-            self.send_vision_data("pickingStation,obstacles", "")
+            self.send_vision_data("pickingMarkers,obstacles", "")
             self.get_arrays()
 
             # Look for current picking bay
             target_marker = None
-            if self.picking_stations[picking_bay_index]:
-                target_marker = self.picking_stations[picking_bay_index]
+            if self.picking_markers[picking_bay_index]:
+                target_marker = self.picking_markers[picking_bay_index]
 
             # Move using APF and switch state when target distance reached
             self.move_to_marker_apf(target_marker, target_distance=0.2, next_state='ADJUST_TO_ITEM')
@@ -587,8 +598,8 @@ class Navigation(Node):
         
         elif self.state == 'TURN_TOWARDS_AISLE':
             turning_speed = 0.14
-            self.send_vision_data("isleMarkers", "")
-            self.aisle_markers = self.filter_poi("isleMarkers")
+            self.send_vision_data("aisleMarkers", "")
+            self.get_arrays()
             if len(self.aisle_markers) != 0:
                 for i, marker in enumerate(self.aisle_markers):
                     if marker.exists is True:
@@ -608,7 +619,7 @@ class Navigation(Node):
                 self.publish_velocity(0.0, turning_speed)
 
         elif self.state == 'DRIVE_OFF_PICKING_STATION':
-            self.send_vision_data("isleMarkers,shelves,obstacles", "")
+            self.send_vision_data("aisleMarkers,shelves,obstacles", "")
             self.get_arrays()
 
             # Take first aisle marker as target
