@@ -150,7 +150,7 @@ class CollectionNode(Node):
 
         # start at reasonable position
         self.armTarget = -45
-        self.
+        # self.
 
 
 def main():
