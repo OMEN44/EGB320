@@ -14,7 +14,7 @@ import numpy as np
 import math
 import random
 
-
+from PiicoDev_MPU6050 import PiicoDev_MPU6050
 
 class Navigation(Node):
     def __init__(self):
@@ -52,6 +52,29 @@ class Navigation(Node):
 
         self.zone_dist_aisle_marker = 1.24
         # self.aisle_imu = imu.getYaw()
+
+        # Setup IMU
+        calibrationSteps = 100
+
+        self.t = time.time()
+        self.Ax_bias = 0
+        self.Gz_bias = 0
+        self.imu = PiicoDev_MPU6050()
+        self.rotation = 0
+        self.aX = 0
+        self.gZ = 0
+
+        count = 0
+        while count < calibrationSteps:
+            accel = self.imu.read_accel_data() # read the accelerometer [ms^-2]
+            self.Ax_bias += accel["x"]
+
+            gyro = self.imu.read_gyro_data()   # read the gyro [deg/s]
+            self.Gz_bias += gyro["z"]
+            count += 1
+
+        self.Ax_bias /= calibrationSteps
+        self.Gz_bias /= calibrationSteps
 
 
     # --------------------------- Publish to vision (objects needed to be detected, target item/picking bay) ---------------------------
@@ -103,6 +126,20 @@ class Navigation(Node):
     # ---------------- STATE MACHINE --------------
         # ---------------- STATE MACHINE --------------
     def state_machine(self):
+        # Update IMU data
+
+        accel = self.imu.read_accel_data() # read the accelerometer [ms^-2]
+        self.aX = accel["x"] - self.Ax_bias
+
+        gyro = self.imu.read_gyro_data()   # read the gyro [deg/s]
+        self.gZ = gyro["z"] - self.Gz_bias
+
+        now = time.time()
+        dt = now - self.t
+        self.t = now
+
+        self.rotation += self.gZ * dt * (np.pi / 180) # THE ERRORR IS HERE IF TURNIGN BAD
+
         # Initialize state tracking variables once
         if not hasattr(self, 'start_time'):
             self.start_time = self.get_clock().now()
