@@ -27,15 +27,16 @@ aisle_distance_wall = {"1":[0.2, np.pi/2], "2":[0.8, -np.pi/2], "3":[0.2, -np.pi
 
 picking_bay_marker_distance = 0.29  # m
 
-deliveries = []
-for picking_bay in [1, 2, 3]:
-    shelf_first = random.randint(0, 5)   # first number 0–5
-    shelf_second = random.randint(1, 4)  # second number 1–4
-    shelf_id = float(f"{shelf_first}.{shelf_second}")  # combine into format like 1.4
-    deliveries.append((picking_bay, shelf_id))
+deliveries = [(1, 5.3), (2, 2.2), (3, 0.4)]
 
-# Unpack into individual variables
-delivery_one, delivery_two, delivery_three = deliveries
+# for picking_bay in [1, 2, 3]:
+#     shelf_first = random.randint(0, 5)   # first number 0–5
+#     shelf_second = random.randint(1, 4)  # second number 1–4
+#     shelf_id = float(f"{shelf_first}.{shelf_second}")  # combine into format like 1.4
+#     deliveries.append((picking_bay, shelf_id))
+
+# # Unpack into individual variables
+# delivery_one, delivery_two, delivery_three = deliveries
 
 deliveryNo = 0
 
@@ -108,7 +109,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
 
         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        k_rep = 10
+        k_rep = 20
 
         # Smooth cosine decay for repulsion
         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
@@ -165,12 +166,12 @@ sceneParameters.obstacle0_StartingPosition = -1
 sceneParameters.obstacle1_StartingPosition = -1
 sceneParameters.obstacle2_StartingPosition = -1
 
-robot_starting_x = random.uniform(-0.8, -0.4)  
-robot_starting_y = random.uniform(-0.85, -0.1)  
-robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
+# robot_starting_x = random.uniform(-0.8, -0.4)  
+# robot_starting_y = random.uniform(-0.85, -0.1)  
+# robot_starting_angle = random.uniform(0, 2*np.pi)  # Random float between 0 and 2π radians
 # sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, robot_starting_angle]  # x, y, theta in radians
-# sceneParameters.robotStartingPosition = [-0.5, -0.1, math.radians(225)]  # x, y, theta in radians
-sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, math.radians(225)]  # x, y, theta in radians
+sceneParameters.robotStartingPosition = [-0.8, -0.05, math.radians(225)]  # x, y, theta in radians
+# sceneParameters.robotStartingPosition = [robot_starting_x, robot_starting_y, math.radians(225)]  # x, y, theta in radians
 
 robotParameters = RobotParameters()
 robotParameters.driveType = 'differential'
@@ -276,6 +277,7 @@ if __name__ == '__main__':
                     kp = 0.01
                     rotation_velocity = kp * rowBearing
                     rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                    print("(0.0, " + str(rotation_velocity) + ")")
                     if abs(rowBearing) < 40:
                         bot.SetTargetVelocities(0.0, 0.0)
                         state = -1.2
@@ -302,13 +304,14 @@ if __name__ == '__main__':
                         theta = 0.0
                         e_theta = angle_wrap(best_bearing - theta)
 
-                        k_omega = 0.4
-                        v_max = 0.1
+                        k_omega = 0.7
+                        v_max = 0.05
                         sigma = np.radians(30)
 
                         omega = k_omega * e_theta
                         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                         bot.SetTargetVelocities(v, omega)
+                        print("(" + str(v) + ", " + str(omega) + ")")
                     else:
                         bot.SetTargetVelocities(0.0, 0.15)
 

@@ -1,4 +1,7 @@
 import numpy as np
+import math
+import time  # Add if not present
+
 obstacle_width = 0.15  # meters
 
 # ---------------------------
@@ -22,8 +25,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         U_rep[mask] = np.maximum(U_rep[mask], k_rep / obs_distance)
     return U_rep
 
-
-def attractiveField(self,target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
+def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
     if target is None:
         return np.zeros_like(phi)
     target_distance, target_bearing = target
@@ -31,8 +33,7 @@ def attractiveField(self,target, phi=np.linspace(-np.pi, np.pi, 360), max_bearin
     U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
     return U_att
 
-def bestBearing(self, U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
-    # Sensor-view slide uses subtraction (Goal - Obstacles)
+def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
     U_total = U_att - U_rep
     if not np.isfinite(U_total).all():
         return None
@@ -41,6 +42,6 @@ def bestBearing(self, U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
     best_index = np.argmax(U_total)
     return phi[best_index]   # radians
 
-def angle_wrap(self, angle):
+def angle_wrap(angle):
     """Wrap angle to [-pi, pi]."""
     return (angle + np.pi) % (2*np.pi) - np.pi
