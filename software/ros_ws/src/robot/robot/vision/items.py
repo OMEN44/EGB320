@@ -33,7 +33,7 @@ def findItems(self, hsvframe, outputFrame):
         area = cv2.contourArea(contour)
         if area > 150 and area < 25000:
             x, y, w, h = cv2.boundingRect(contour)
-            poi = getPoi('item', count, ITEM_WIDTHS[3], w, x, self.calibration['new_k'][0,0])
+            poi = getPoi(ITEM_WIDTHS[3], w, x, self.calibration['new_k'][0,0])
             outputFrame = cv2.putText(outputFrame, f'Item {count}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
             count += 1
             outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)

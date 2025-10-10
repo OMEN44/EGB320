@@ -59,22 +59,22 @@ def close_gripper():
     servo3.angle = -90  # Closed
     sleep(1)
     print("Gripper closed")
-
+# Negative is lower lvl height
 def top_shelf():
     """Move to top shelf."""
-    smooth_move(50, step=0.1, delay=0.02)
+    smooth_move(70, step=0.1, delay=0.02)
     print("Moving to top shelf")
     sleep(1)
 
 def middle_shelf():
     """Move to middle shelf."""
-    smooth_move(-20, step=0.1, delay=0.02)
+    smooth_move(0, step=0.1, delay=0.02)
     print("Moving to middle shelf")
     sleep(1)
 
 def bottom_shelf():
     """Move to bottom shelf."""
-    smooth_move(-65, step=0.1, delay=0.02)
+    smooth_move(-50, step=0.1, delay=0.02)
     print("Moving to bottom shelf")
     sleep(1)
 
@@ -86,7 +86,7 @@ def floor_level():
     close_gripper()
 
 while True:
-    user_input = input("0 (Ground level), 1 (Low Shelf), 2 (Middle Shelf), 3 (High Shelf), q to quit, s to close gripper: ")
+    user_input = input("0 (Ground level), 1 (Low Shelf), 2 (Middle Shelf), 3 (High Shelf), 4 (Idle Position), q to quit, s to close gripper: ")
     
     if user_input == "s":
         close_gripper()
@@ -106,11 +106,15 @@ while True:
         top_shelf()
         open_gripper()
 
+    elif user_input == "4":
+        bottom_shelf()        
+
     elif user_input.lower() == "q":
         print("Exiting program.")
         servo1.close()
         servo3.close()
         break
+    
 
     else:
         print("Invalid input, please try again.")

@@ -2,10 +2,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import String
 
-from robot.vision.utils import getPoi
-
-import json
-import random
+from robot.vision.utils import getPoi, getEmptyPoi
 
 isleMarkerCount = []
 
@@ -24,50 +21,72 @@ def findIsleMarkers(self, hsvFrame, outputFrame):
     # 1: number of markers
     # 2: average width
     # 3: list of marker rectangles
-    clusterCenter = [[0,0], 0, 0, []]
+    # clusterCenter = [[0,0], 0, 0, []]
+    clusterCenter = {
+        'position': [0,0],
+        'count': 0,
+        'average_width': 0,
+        'rectangles': []
+    }
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area > 200 and area < 10000:
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
-            if cv2.isContourConvex(approx) and len(approx) > 6:
+            if len(approx) > 6 and cv2.isContourConvex(approx):
                 
                 x, y, w, h = cv2.boundingRect(approx)
                 if abs(w - h) < 10:
                     # If same positionn assume duplicate
-                    dulicate = False
-                    for prev in clusterCenter[3]:
+                    duplicate = False
+                    for prev in clusterCenter['rectangles']:
                         if abs(prev[0] - x) < (w * 0.5) and abs(prev[1] - y) < (h * 0.5):
-                            dulicate = True
+                            duplicate = True
                             break
 
-                    if not dulicate:
+                    if not duplicate:
                         outputFrame = cv2.drawContours(outputFrame, [approx], -1, (255, 0, 0), 2)
                         # outputFrame = cv2.circle(outputFrame, (int(x + w / 2), int(y + h / 2)), 5, (0, 255, 0), -1)
-                        clusterCenter[0][0] += (x + w / 2)
-                        clusterCenter[0][1] += (y + h / 2)
-                        clusterCenter[1] += 1
-                        clusterCenter[2] += w
-                        clusterCenter[3].append((x, y, w, h))
-                
-    if (clusterCenter[1] > 0):
-        clusterCenter[0][0] = clusterCenter[0][0] / clusterCenter[1]
-        clusterCenter[0][1] = clusterCenter[0][1] / clusterCenter[1]
-        clusterCenter[2] = clusterCenter[2] / clusterCenter[1]
-        outputFrame = cv2.circle(outputFrame, (int(clusterCenter[0][0]), int(clusterCenter[0][1])), 5, (0, 0, 255), -1)
-        outputFrame = cv2.putText(outputFrame, f'{clusterCenter[1]}: {np.round(clusterCenter[2])}px', (int(clusterCenter[0][0]) - 5, int(clusterCenter[0][1]) + 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        clusterCenter['position'] = [clusterCenter['position'][0] + (x + w / 2), clusterCenter['position'][1] + (y + h / 2)]
+                        clusterCenter['count'] += 1
+                        clusterCenter['average_width'] += w
+                        clusterCenter['rectangles'].append((x, y, w, h))
 
-        return [outputFrame, [getPoi('isleMarkers', clusterCenter[1], 7, clusterCenter[2], clusterCenter[0][0], self.calibration['new_k'][0,0])]]
-    return [outputFrame, []]
+    if (clusterCenter['count'] > 0):
+        if (clusterCenter['count'] > 1):
+            clusterCenter['position'][0] = clusterCenter['position'][0] / clusterCenter['count']
+            clusterCenter['position'][1] = clusterCenter['position'][1] / clusterCenter['count']
+            clusterCenter['average_width'] = clusterCenter['average_width'] / clusterCenter['count']
+        outputFrame = cv2.circle(outputFrame, (int(clusterCenter['position'][0]), int(clusterCenter['position'][1])), 5, (0, 0, 255), -1)
+        outputFrame = cv2.putText(
+            outputFrame, 
+            '{}: {}px'.format(str(clusterCenter['count']), str(np.round(clusterCenter['average_width']))), 
+            (int(clusterCenter['position'][0]) - 5, 
+            int(clusterCenter['position'][1]) + 40), 
+            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 
+            2
+        )
 
-def findPickingStation(self, hsvFrame, outputFrame):
+        poi = getPoi(7, clusterCenter['average_width'], clusterCenter['position'][0], self.calibration['new_k'][0,0])
+
+        return [outputFrame, [
+            poi if clusterCenter['count'] == 1 else getEmptyPoi(),
+            poi if clusterCenter['count'] == 2 else getEmptyPoi(),
+            poi if clusterCenter['count'] == 3 else getEmptyPoi(),
+        ]]
+    return [outputFrame, [getEmptyPoi(), getEmptyPoi(), getEmptyPoi()]]
+
+def findPickingStationMarkers(self, hsvFrame, outputFrame):
     # make a mask for the color black
     lower_black = np.array([0, 0, 0])
-    upper_black = np.array([179, 255, 80])
+    upper_black = np.array([179, 255, 100])
 
     mask = cv2.inRange(hsvFrame, lower_black, upper_black)
 
     contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
+
+    mask = cv2.erode(mask, np.ones((5, 5)))  # Erode to remove noise
+    mask = cv2.dilate(mask, np.ones((5, 5)))  # Dilate to restore size
 
     # 0: (x,y) position
     # 1: number of markers
@@ -85,27 +104,28 @@ def findPickingStation(self, hsvFrame, outputFrame):
                 outputFrame = cv2.drawContours(outputFrame, [approx], -1, (0, 255, 0), 2)
                 
                 if len(isleClusters) == 0:
-                    isleClusters.append([[x + w / 2, y + h / 2], 1, w, [(x, y, w, h)]])
+                    isleClusters.append({'position': [x + w / 2, y + h / 2], 'count': 1, 'average_width': w, 'rectangles': [(x, y, w, h)]})
                 else:
                     newCluster = True
                     for cluster in isleClusters:
-                        if abs(cluster[0][0] - x) < (w * 3): # Only check need to check in the x direction
+                        if abs(cluster['position'][0] - x) < (w * 3): # Only check need to check in the x direction
                             # check to see if this is a double up
                             duplicate = False
-                            for r in cluster[3]:
+                            for r in cluster['rectangles']:
                                 if abs(r[0] - x) < (w * 0.5) and abs(r[1] - y) < (h * 0.5):
                                     duplicate = True
                                     break
                             if not duplicate:
-                                cluster[0][0] = (cluster[0][0] + x + w / 2) / 2
-                                cluster[0][1] = (cluster[0][1] + y + h / 2) / 2
-                                cluster[1] += 1
-                                cluster[2] = (cluster[2] + w)
-                                cluster[3].append((x, y, w, h))
+                                cluster['position'][0] = (cluster['position'][0] + x + w / 2) / 2
+                                cluster['position'][1] = (cluster['position'][1] + y + h / 2) / 2
+                                cluster['count'] += 1
+                                cluster['average_width'] += w
+                                # cluster['average_width'] = (cluster['average_width'] + w) / 2
+                                cluster['rectangles'].append((x, y, w, h))
                             newCluster = False
                             break
                     if newCluster:
-                        isleClusters.append([[x + w / 2, y + h / 2], 1, w, [(x, y, w, h)]])
+                        isleClusters.append({'position': [x + w / 2, y + h / 2], 'count': 1, 'average_width': w, 'rectangles': [(x, y, w, h)]})
 
 
     # If there are two clusters with the same marker count assume the one on the right should be 1 count higher
@@ -114,11 +134,11 @@ def findPickingStation(self, hsvFrame, outputFrame):
         while not done:
             for i in range(len(isleClusters)):
                 for j in range(i + 1, len(isleClusters)):
-                    if isleClusters[i][1] == isleClusters[j][1]:
-                        if isleClusters[i][0][0] < isleClusters[j][0][0]:
-                            isleClusters[j][1] += 1
+                    if isleClusters[i]['count'] == isleClusters[j]['count']:
+                        if isleClusters[i]['position'][0] < isleClusters[j]['position'][0]:
+                            isleClusters[j]['count'] += 1
                         else:
-                            isleClusters[i][1] += 1
+                            isleClusters[i]['count'] += 1
                         done = False
                         break
                 else:
@@ -127,14 +147,15 @@ def findPickingStation(self, hsvFrame, outputFrame):
             else:
                 done = True
 
-    message = []
+    message = [getEmptyPoi(), getEmptyPoi(), getEmptyPoi()]
 
     for cluster in isleClusters:
-        cluster[2] = cluster[2] / cluster[1]
-        # draw a dot in the middle of each cluster and label with number of markers
-        cv2.circle(outputFrame, (int(cluster[0][0]), int(cluster[0][1])), 5, (0, 0, 255), -1)
-        cv2.putText(outputFrame, f'{cluster[1]}', (int(cluster[0][0]) - 5, int(cluster[0][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        if cluster['count'] <= 3:
+            cluster['average_width'] = cluster['average_width'] / cluster['count']
+            # draw a dot in the middle of each cluster and label with number of markers
+            cv2.circle(outputFrame, (int(cluster['position'][0]), int(cluster['position'][1])), 5, (0, 0, 255), -1)
+            cv2.putText(outputFrame, '{}'.format(str(cluster['count'])), (int(cluster['position'][0]) - 5, int(cluster['position'][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        message.append(getPoi('pickingStation', cluster[1], 5, cluster[2], cluster[0][0], self.calibration['new_k'][0,0]))
+            message[cluster['count'] - 1] = getPoi(5, cluster['average_width'], cluster['position'][0], self.calibration['new_k'][0,0])
 
     return [outputFrame, message]

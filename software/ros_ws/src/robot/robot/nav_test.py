@@ -152,7 +152,7 @@ class Navigation(Node):
 
         # ----------- SEQUENCE CONTROL -----------
         if self.state == 'TURN_CALIBRATION':
-            speed = 0.08 # change this to change speed
+            speed = 0.2 # change this to change speed
             # 0.08 in code was 0.001 m/s in real life
             # 0.3 in code was 0.6 m/s in real life
             if elapsed < 5.0:

@@ -24,16 +24,18 @@ class Vision(Node):
         self.get_logger().info('Vision node has been started.')
 
         # Pipeline options:
-        # isleMarkers
+        # aisleMarkers
+        # pickingMarkers
         # pickingStation
-        # colourMask
         # items
         # obstacles
         # shelves
-        # self.pipeline = ["pickingStation", "isleMarkers", "items", "colourMask", "shelves", "obstacles"]
-        # self.pipeline = ["shelves", "isleMarkers", "items", "colourMask", ""]
-        self.pipeline = ["items", "colourMask", "pickingStation"]
+        # colourMask
+        # self.pipeline = ["pickingStation", "aisleMarkers", "items", "colourMask", "shelves", "obstacles"]
+        # self.pipeline = ["shelves", "aisleMarkers", "items", "colourMask", ""]
+        # self.pipeline = ["items", "colourMask", "pickingStation"]
         # self.pipeline = ["test", "colourMask"]
+        self.pipeline = ["pickingStation", "pickingMarkers", "aisleMarkers", "items", "shelves", "colourMask"]
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)
@@ -57,12 +59,13 @@ class Vision(Node):
         self.frameName = 'isle1'
         self.number = [1, 1.3]
         self.poiHistory = {
-            'isleMarkers': [],
-            'pickingStation': [],
-            'colourMask': [],
             'items': [],
+            'ramps': [],
+            'shelves': [],
             'obstacles': [],
-            'shelves': []
+            'aisle_markers': [],
+            'picking_markers': [],
+            'picking_station': [],
         }
         self.calibration = {
             'map1': None,
