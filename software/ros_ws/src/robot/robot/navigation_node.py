@@ -46,7 +46,7 @@ class Navigation(Node):
         self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
         # State machine variables
-        self.state = 'START'
+        self.state = 'TURN_CALIBRATION'
         self.current_heading = 0.0
         self.target_heading = 0.0
 
@@ -206,7 +206,7 @@ class Navigation(Node):
         best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
 
         if best_bearing is not None:
-            theta = 0.0  # replace with IMU heading if available
+            theta = 0.0  # Local frame; use IMU if global coordinates
             e_theta = apf.angle_wrap(best_bearing - theta)
             k_omega = 0.3
             v_max = 0.1
@@ -243,11 +243,7 @@ class Navigation(Node):
         shelf_orientation = None
         aisle_orientation = None
         self.get_logger().info(self.state)
-        if self.state == 'START':
-            self.picking_bay_index, self.aisle_id, self.picking_bay_wall_distance, self.aisle_wall_distance, self.shelf_marker_distance, self.shelf_orientation, self.aisle_orientation = self.get_measurements(self.deliveries, self.deliveryNo)
-            self.state = 'TURN_CALIBRATION'
-
-        elif self.state == 'TURN_CALIBRATION':
+        if self.state == 'TURN_CALIBRATION':
             calibration_turn_speed = 0.14
 
             # Initialize variables once
@@ -273,17 +269,17 @@ class Navigation(Node):
             if not self.calibration_complete:
                 self.publish_velocity(0.0, calibration_turn_speed)
 
-                if len(self.aisle_markers) != 0:
+                if len(self.aisle_markers) > 0:
                     self.publish_velocity(0.0, 0.0)
                     for i, marker in enumerate(self.aisle_markers):
-                        if marker.exists is True:
+                        if marker.exists:
                             self.row_index = i
                     self.state = 'CALIBRATION_AISLE_MARKER'
 
-                elif len(self.picking_markers) != 0:
+                elif len(self.picking_markers) > 0:
                     self.publish_velocity(0.0, 0.0)
                     for i, marker in enumerate(self.picking_markers):
-                        if marker.exists is True:
+                        if marker.exists:
                             self.picking_marker_index = i
                     self.state = 'CALIBRATION_PICKING_STATION'
 
@@ -325,38 +321,13 @@ class Navigation(Node):
                     self.get_logger().info("No markers or shelves found after full rotation.")
                     # self.state = 'IDLE' or 'SEARCH_FAIL' or whatever your next fallback state is
 
-
-        # if self.state == 'TURN_CALIBRATION':
-        #     calibration_turn_speed = 0.14
-        #     self.send_vision_data("isleMarkers,shelves,pickingStations", "")
-        #     self.get_arrays()
-
-
-        #     if len(self.aisle_markers) != 0:
-        #         self.publish_velocity(0.0, 0.0)
-        #         for i, marker in enumerate(self.aisle_markers):
-        #             if marker.exists is True:
-        #                 self.row_index = i  # or whichever field you need
-        #         self.state = 'CALIBRATION_AISLE_MARKER'
-
-        #     elif len(self.picking_stations) != 0:
-        #         self.publish_velocity(0.0, 0.0)
-        #         self.state = 'CALIBRATION_PICKING_STATION'
-
-        #     elif len(self.shelves) != 0:
-        #         self.publish_velocity(0.0, 0.0)
-        #         self.state = 'CALIBRATION_SHELF'
-
-        #     else:
-        #         self.publish_velocity(0.0, calibration_turn_speed)
-
         elif self.state == 'CALIBRATION_PICKING_STATION':
             self.send_vision_data("pickingMarkers,obstacles,shelves", "")
             self.get_arrays()
 
             # Look for Bay 1 marker
             target_marker = None
-            if self.picking_markers[self.picking_marker_index].exists is True:
+            if self.picking_markers[self.picking_marker_index].exists:
                 target_marker = self.picking_markers[self.picking_marker_index]
 
             # Move using APF and switch state when target distance reached
@@ -391,8 +362,9 @@ class Navigation(Node):
                 self.get_arrays()
 
                 # Take first aisle marker as target
+                target_marker = None
                 for i, marker in enumerate(self.aisle_markers):
-                    if self.aisle_markers[i].exists is True:
+                    if self.aisle_markers[i].exists:
                         aisle_index = i
                         break
                 
@@ -411,22 +383,22 @@ class Navigation(Node):
             target_marker = None
             if self.picking_markers[0].exists is True:  # data = 1 means Bay 1 marker
                 target_marker = self.picking_markers[0]
-                self.publish_velocity(0.0, calibration_turn_speed)
 
-            # Align with centre bearing
-            centre_bearing = target_marker[1][1]  # middle bearing
-            kp = 0.8
-            rotation_velocity = kp * centre_bearing
-            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+            if target_marker:
+                # Align with centre bearing
+                centre_bearing = target_marker[1][1]  # middle bearing
+                kp = 0.8
+                rotation_velocity = kp * centre_bearing
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-            if abs(centre_bearing) < 0.02:  # ~1 degree tolerance
-                self.publish_velocity(0.0, 0.0)
-                self.distance_picking_bay_1 = target_marker[0]  # distance
+                if abs(centre_bearing) < 0.02:  # ~1 degree tolerance
+                    self.publish_velocity(0.0, 0.0)
+                    self.distance_picking_bay_1 = target_marker[0]  # distance
 
-                self.get_logger().info(f"Picking Bay 1 found at {self.distance_picking_bay_1:.2f} m")
-                self.state = 'FIND_PICKING_BAY2'
+                    self.get_logger().info(f"Picking Bay 1 found at {self.distance_picking_bay_1:.2f} m")
+                    self.state = 'FIND_PICKING_BAY2'
             else:
-                self.publish_velocity(0.0, rotation_velocity)
+                self.publish_velocity(0.0, calibration_turn_speed)
 
         # --------------------------------------------------------
 
@@ -439,43 +411,35 @@ class Navigation(Node):
             target_marker = None
             if self.picking_markers[1].exists is True:  # data = 2 means Bay 2 marker
                 target_marker = self.picking_markers[1]
-                self.publish_velocity(0.0, calibration_turn_speed)
+            if target_marker:
+                centre_bearing = target_marker[1][1]
+                kp = 0.8
+                rotation_velocity = kp * centre_bearing
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
 
-            centre_bearing = target_marker[1][1]
-            kp = 0.8
-            rotation_velocity = kp * centre_bearing
-            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+                if abs(centre_bearing) < 0.02:
+                    self.publish_velocity(0.0, 0.0)
+                    self.distance_picking_bay_2 = target_marker[0]
 
-            if abs(centre_bearing) < 0.02:
-                self.publish_velocity(0.0, 0.0)
-                self.distance_picking_bay_2 = target_marker[0]
-
-                self.get_logger().info(f"Picking Bay 2 found at {self.distance_picking_bay_2:.2f} m")
-                self.state = 'CALCULATE_AISLE_IMU'
+                    self.get_logger().info(f"Picking Bay 2 found at {self.distance_picking_bay_2:.2f} m")
+                    self.state = 'CALCULATE_AISLE_IMU'
             else:
-                self.publish_velocity(0.0, rotation_velocity)
+                self.publish_velocity(0.0, calibration_turn_speed)
 
         # --------------------------------------------------------
 
         elif self.state == 'CALCULATE_AISLE_IMU':
-            picking_bay_marker_distance = 0.29  # known distance between markers
-
-            # Apply cosine rule
-            cos_D = (
-                (picking_bay_marker_distance**2 + self.distance_picking_bay_2**2 - self.distance_picking_bay_1**2)
-                / (2 * self.distance_picking_bay_2 * self.distance_picking_bay_1)
-            )
-
-            # Clamp due to float errors
-            cos_D = max(-1, min(1, cos_D))
-            angleD = math.acos(cos_D)
-
-            # Use IMU to calibrate aisle orientation
-            currentIMU = imu.getYaw()  # <-- replace with your IMU API
-            self.aisle_IMU = currentIMU - angleD - np.pi/2
-
-            self.get_logger().info(f"Aisle IMU calibrated to {math.degrees(self.aisleIMU):.2f}°")
-            self.state = 'TURN_READY_TO_PICK_UP'  # Move on to nav logic
+            if self.distance_picking_bay_1 is not None and self.distance_picking_bay_2 is not None:
+                cos_D = (self.picking_bay_marker_distance**2 + self.distance_picking_bay_2**2 - self.distance_picking_bay_1**2) / (2 * self.distance_picking_bay_2 * self.distance_picking_bay_1)
+                cos_D = max(-1, min(1, cos_D))  # Clamp for numerical stability
+                angleD = math.acos(cos_D)
+                currentIMU = self.imu.get_yaw()
+                self.aisle_IMU = currentIMU - angleD - np.pi/2
+                self.get_logger().info(f"Aisle IMU calibrated to {math.degrees(self.aisle_IMU):.2f}°")
+                self.state = 'TURN_READY_TO_PICK_UP'
+            else:
+                self.get_logger().info("Missing distance data for IMU calibration, retrying 'FIND_PICKING_BAY1'")
+                self.state = 'FIND_PICKING_BAY1'  # Retry if data is missing
         
         elif self.state == 'TURN_READY_TO_PICK_UP':
             target_heading = self.aisle_IMU + math.pi/2
