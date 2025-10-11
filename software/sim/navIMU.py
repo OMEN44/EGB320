@@ -8,7 +8,7 @@ import time
 import random
 
 
-obstacle_width = 0.5  # m
+obstacle_width = 1 # m
 max_range = 2.5      # m
 
 shelf_to_aisle = {
@@ -676,7 +676,11 @@ if __name__ == '__main__':
                     for group in (obstaclesRB, shelfRB):
                         if group:
                             all_obstacles.extend(group)   # merge lists
-                    U_rep = repulsiveField(all_obstacles, phi)
+                    goal_distance = pickingStationRB[pickingBayArrayIndex][0]
+                    goal_bearing = pickingStationRB[pickingBayArrayIndex][1] 
+                    goal = [goal_distance, goal_bearing]
+                                       
+                    U_rep = repulsiveField(goal, phi)
                     U_att = attractiveField(pickingStationRB[pickingBayArrayIndex], phi)
                     best_bearing = bestBearing(U_att, U_rep, phi)
 
