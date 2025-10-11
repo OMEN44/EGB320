@@ -1,7 +1,7 @@
 [workspace]
 channels = ["robostack-jazzy", "conda-forge"]
 name = "egb320"
-platforms = ["linux-aarch64"]
+platforms = ["linux-aarch64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
@@ -27,10 +27,10 @@ ros-jazzy-rosbridge-suite = ">=2.1.0,<3"
 scipy = ">=1.16.2,<2"
 
 [pypi-dependencies]
+# lgpio = ">=0.2.2.0, <0.3"
+# gpiozero = ">=2.0.1, <3"
 pyfakewebcam = ">=0.1.0, <0.2"
 opencv-python = "*"
-gpiozero = ">=2.0.1, <3"
-lgpio = ">=0.2.2.0, <0.3"
 smbus = ">=1.1.post2, <2"
 mpu6050-raspberrypi = ">=1.2, <2"
 mpu6050 = ">=0.0.3, <0.0.4"
