@@ -143,14 +143,56 @@
 # if __name__ == '__main__':
 #     main()
 
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Float32MultiArray
+import time
+import numpy as np
+
+from robot.collection.servoDriver import Servo180
+
 class CollectionNode(Node):
     def __init__(self):
         super().__init__('collection_node')
         self.get_logger().info('Collection node started')
 
-        # start at reasonable position
-        self.armTarget = -45
-        # self.
+        # setup subscribers
+        self.numberTopic = self.create_subscription(Float32MultiArray, '/number_topic', self.onNumberMessage, 10)
+
+        # timers
+        self.updateTimer = self.create_timer(0.01, self.updateServos)
+
+        # Setup servos
+        self.arm = Servo180(channel=0, min_pulse=0.3)
+        self.gripper = Servo180(channel=1, min_pulse=0.75, max_pulse=2.4)
+        self.arm.set_angle(0)
+        self.gripper.set_angle(0)
+        time.sleep(1)
+
+        self.numbers = {
+            'arm': 0,
+            'gripper': 0
+        }
+
+        self.currentAngles = [0, 0] # arm, gripper
+        self.targets = [0, 0] # arm, gripper
+
+    def onNumberMessage(self, msg):
+        self.targets[0] = max(msg.data[8], msg.data[9])
+        self.targets[1] = max(msg.data[10], msg.data[11])
+
+    def updateServos(self):
+
+        for i in range(2):
+            if abs(self.targets[i] - self.currentAngles[i]) > 0.1:
+                self.currentAngles[i] += (self.targets[i] - self.currentAngles[i]) * 0.1
+            else:
+                self.currentAngles[i] = self.targets[i]
+
+        a = self.arm.set_angle(self.currentAngles[0])
+        b = self.gripper.set_angle(self.currentAngles[1])
+
+        self.get_logger().info(f'\nArm\nTarget: {self.targets[0]:.1f}, Current: {self.currentAngles[0]:.1f}, Set: {a}\nGripper\nTarget: {self.targets[1]:.1f}, Current: {self.currentAngles[1]:.1f}, Set: {b}')
 
 
 def main():

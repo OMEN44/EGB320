@@ -11,15 +11,16 @@ class Servo180:
         self.max_angle = max_angle
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
+        self.frame_width = frame_width
         self.angle = min(max(start_angle, self.min_angle), self.max_angle)
         self.pwmHandle.start(self.angle)
     
     def set_angle(self, angle):
         self.angle = min(max(angle, self.min_angle), self.max_angle)
-        duty_cycle = ((self.angle - self.min_angle) / (self.max_angle - self.min_angle)) * (self.max_pulse - self.min_pulse) + self.min_pulse
+        duty_cycle = (((self.angle - self.min_angle) / (self.max_angle - self.min_angle)) * (self.max_pulse - self.min_pulse) + self.min_pulse) / self.frame_width * 100
         self.pwmHandle.change_duty_cycle(duty_cycle)
+        return duty_cycle
 
     def stop(self):
         self.pwmHandle.stop()
         self.angle = None
-

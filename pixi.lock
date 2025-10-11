@@ -729,6 +729,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/04/6e/3ae8005fb549cddb12dfac5512c379e3c66c0445443336230daef0bc5b43/piicodev-1.10.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ce/8b/0bb1984cf716d7b4825a1480f77e71441d39ffebb158ccce5e95ce17eec9/pyfakewebcam-0.1.0.tar.gz
       - pypi: https://files.pythonhosted.org/packages/0a/aa/32d00b90603c2146a6385076e249320cddf3ca17a50773a72b5654f42600/quat-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/4c/44/c417f283a4ccdb214cc26583e9d54640ba6f2cea2a561355ca4829e885bb/rpi_hardware_pwm-0.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/4d/5c/70e14aa4f0c586efc017e1d1aa6e2f7921eefc7602fc2d03368ff912aa91/smbus-1.1.post2.tar.gz
       - pypi: https://files.pythonhosted.org/packages/85/9f/2235ba9001e3c29fc342eeb222104420bcb7bac51555f0c034376a744075/smbus2-0.5.0-py2.py3-none-any.whl
 packages:
@@ -11592,6 +11593,11 @@ packages:
   - pkg:pypi/rospkg?source=hash-mapping
   size: 31293
   timestamp: 1737835793379
+- pypi: https://files.pythonhosted.org/packages/4c/44/c417f283a4ccdb214cc26583e9d54640ba6f2cea2a561355ca4829e885bb/rpi_hardware_pwm-0.3.0-py3-none-any.whl
+  name: rpi-hardware-pwm
+  version: 0.3.0
+  sha256: 9a1407512871232c64c55572c1bcd0a0c2872a4241df53b79ca3b5e185499ee5
+  requires_python: '>=3.5'
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/scipy-1.16.2-py311h33b5a33_0.conda
   sha256: 8bba84fc05ec23d0eec9e8877ecef8c4733c081575f0e90ef5de6b06e1bf4550
   md5: 135bbc31da613f1f8456562cf84618b7
