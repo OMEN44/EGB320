@@ -456,6 +456,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
             self.send_vision_data("pickingMarkers,shelves,obstacles", "")
+            self.get_arrays()  
             all_obstacles = []
 
             for group in (self.obstacles, self.shelves):
@@ -470,12 +471,12 @@ class Navigation(Node):
             if self.picking_stations:
                 bearings.extend([b for _, b in self.picking_stations])
 
-                ref_bearing = max(bearings)  # rightmost
+                ref_bearing = min(bearings)  # rightmost
 
                 # Offset the bearing by a few degrees (adjust sign & value as needed)
                 offset_deg = 10.0
                 offset = np.radians(offset_deg)
-                goal_bearing = ref_bearing + offset
+                goal_bearing = ref_bearing - offset
             
             else:
                 # Fallback: straight ahead
@@ -526,6 +527,7 @@ class Navigation(Node):
         elif self.state == 'ADJUST_TO_ITEM':
             #Something about camera and item and certain distance drive towards it
             self.send_vision_data("", "ITEM_NAME")
+            self.get_arrays()  
             self.state = 'COLLECT_ITEM'
         
         elif self.state == 'COLLECT_ITEM':          
@@ -688,7 +690,126 @@ class Navigation(Node):
 
         elif self.state == 'DROP_ITEM':
             self.publish_collection(self.shelf_height, True) # Command to drop item
-            self.state = 'DONE'
+            self.state = 'MOVE_BACK_FROM_SHELF'
+
+        elif self.state == 'MOVE_BACK_FROM_SHELF':
+            reverse_speed = -0.05
+            reverse_duration = 1.5  # seconds
+            self.publish_velocity(reverse_speed, 0.0)
+            time.sleep(reverse_duration)
+            self.publish_velocity(0.0, 0.0)
+            self.delivery_no += 1
+            if self.delivery_no < len(self.deliveries):
+                self.state = 'TURN_TO_PICKING_MARKER'
+            else:
+                self.state = 'DONE'
+        
+        elif self.state == 'TURN_TO_PICKING_MARKER':
+            turn_speed = 0.14
+            self.send_vision_data("pickingMarkers", "")
+            self.get_arrays()
+            if (self.aisle_id != 2):
+                self.state = 'DRIVE_OUT_OF_AISLE3'
+            else:
+                target_marker = None
+                if self.picking_markers[self.picking_marker_index].exists is True:
+                    target_marker = self.picking_markers[self.picking_marker_index]
+                    # Keep turning until marker found
+                else:
+                    self.publish_velocity(0.0, turn_speed)
+
+                # Align with centre bearing
+                centre_bearing = target_marker[1][1]  # middle bearing
+                kp = 0.8
+                rotation_velocity = kp * centre_bearing
+                rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+                if abs(centre_bearing) < 0.02:  # ~1 degree tolerance
+                    self.publish_velocity(0.0, 0.0)
+                    self.state = 'DRIVE_OUT_OF_AISLE_1_OR_2'
+                else:
+                    self.publish_velocity(0.0, rotation_velocity)
+            
+        elif self.state == 'DRIVE_OUT_OF_AISLE_1_OR_2':
+            self.send_vision_data("pickingMarkers,shelves,obstacles", "")
+            self.get_arrays()
+
+            # Look for current picking bay
+            target_marker = None
+            if self.picking_markers[self.picking_marker_index]:
+                target_marker = self.picking_markers[self.picking_marker_index]
+
+            # Move using APF and switch state when target distance reached
+            self.move_to_marker_apf(target_marker, target_distance=0.5, next_state='TURN_TO_AISLE_2_DIRECTION')
+
+        elif self.state == 'TURN_TO_AISLE_2_DIRECTION':
+            target_heading = self.aisle_IMU - math.pi/2
+            current_heading = imu.getYaw()
+            e_theta = apf.angle_wrap(target_heading - current_heading)
+
+            kp = 0.5
+            rotation_velocity = kp * e_theta
+            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+            if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
+                self.publish_velocity(0.0, 0.0)
+                current_IMU = imu.getYaw()
+                self.aisle_imu = current_IMU + math.pi/2 # Recalibrate aisle IMU
+                self.state = 'DRIVE_TO_FRONT_OF_AISLE_2'
+            else:
+                self.publish_velocity(0.0, rotation_velocity)
+
+        elif self.state == 'DRIVE_TO_FRONT_OF_AISLE_2':
+            self.send_vision_data("pickingMarkers,shelves,obstacles", "")
+            self.get_arrays()  
+            all_obstacles = []
+
+            for group in (self.obstacles, self.shelves):
+                if group:
+                    all_obstacles.extend(group)
+
+            # --- 2. Determine reference bearing ---
+            # Select shelf or picking bay bearings (whichever is detected)
+            bearings = []
+            # if self.shelves:
+            #     bearings.extend([b for _, b in self.shelfRB])
+            if self.picking_stations:
+                bearings.extend([b for _, b in self.picking_stations])
+
+                ref_bearing = max(bearings)  # rightmost
+
+                # Offset the bearing by a few degrees (adjust sign & value as needed)
+                offset_deg = 10.0
+                offset = np.radians(offset_deg)
+                goal_bearing = ref_bearing + offset
+            
+            else:
+                # Fallback: straight ahead
+                goal_bearing = imu.getYaw()
+
+            # --- 3. Attractive field goal (bearing only) ---
+            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
+            goal = [goal_distance, goal_bearing]
+
+            self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_READY_TO_PICK_UP')
+
+        elif self.state == 'DRIVE_OUT_OF_AISLE3':
+            target_heading = self.aisle_IMU - math.pi/2
+            current_heading = imu.getYaw()
+            e_theta = apf.angle_wrap(target_heading - current_heading)
+
+            kp = 0.5
+            rotation_velocity = kp * e_theta
+            rotation_velocity = max(min(rotation_velocity, 0.3), -0.3)
+
+            if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
+                self.publish_velocity(0.0, 0.0)
+                current_IMU = imu.getYaw()
+                self.aisle_imu = current_IMU + math.pi/2 # Recalibrate aisle IMU
+                self.state = 'TURN_READY_TO_PICK_UP'
+            else:
+                self.publish_velocity(0.0, rotation_velocity)
+
 
         elif self.state == 'DONE':
             self.publish_velocity(0.0, 0.0)
