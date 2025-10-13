@@ -77,6 +77,7 @@ class Navigation(Node):
         self.shelf_orientation = None
         self.aisle_orientation = None
 
+        self.shelf_height = None  # Default shelf height level (1-5)
         self.picking_marker_index = None
 
         self.deliveries = []
@@ -447,10 +448,14 @@ class Navigation(Node):
                 self.publish_velocity(0.0, rotation_velocity)
 
         elif self.state == 'GET_DELIVERY_DATA':
-            picking_bay_index, aisle_id, picking_bay_wall_distance, aisle_wall_distance, shelf_marker_distance, shelf_orientation, aisle_orientation = self.get_delivery_measurements(self.deliveries, self.delivery_no)
-            self.state = 'DRIVE_TO_FRONT_OF_PICKING_STATION'
+            self.publish_collection(4, True)
+            if self.arm_status == True: # Assuming arm_status is updated via a subscriber
+                self.shelf_height = 1
+                picking_bay_index, aisle_id, picking_bay_wall_distance, aisle_wall_distance, shelf_marker_distance, shelf_orientation, aisle_orientation = self.get_delivery_measurements(self.deliveries, self.delivery_no)
+                self.state = 'DRIVE_TO_FRONT_OF_PICKING_STATION'
 
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
+            self.send_vision_data("pickingMarkers,shelves,obstacles", "")
             all_obstacles = []
 
             for group in (self.obstacles, self.shelves):
@@ -524,9 +529,14 @@ class Navigation(Node):
             self.state = 'COLLECT_ITEM'
         
         elif self.state == 'COLLECT_ITEM':          
-            self.publish_collection(1) # Command to collect for arm (IT IS 1??) - yeah
+            self.publish_collection(0, True)
             if self.arm_status == True: # Assuming arm_status is updated via a subscriber
-                self.state = 'TURN_TOWARDS_AISLE'
+                self.publish_collection(0, False)
+                if self.arm_status == True:
+                    self.publish_collection(4, False)
+                    if self.arm_status == True:
+                        self.state = 'TURN_TOWARDS_AISLE'
+                
         
         elif self.state == 'TURN_TOWARDS_AISLE':
             turning_speed = 0.14
@@ -642,9 +652,8 @@ class Navigation(Node):
             )
             
         elif self.state == 'LIFT_ARM':
-            self.publish_collection(3) # Command to lift arm
+            self.publish_collection(self.shelf_height, False) # Command to lift arm
             if self.arm_status == True: # Assuming arm_status is updated via a subscriber
-                self.arm_status = False
                 self.state = 'TURN_TO_SHELF'
                 self.get_logger().info("Turning to shelf...")
 
@@ -678,7 +687,7 @@ class Navigation(Node):
                 self.publish_velocity(forward_speed, 0.0)
 
         elif self.state == 'DROP_ITEM':
-            self.publish_collection(4) # Command to drop item
+            self.publish_collection(self.shelf_height, True) # Command to drop item
             self.state = 'DONE'
 
         elif self.state == 'DONE':
