@@ -13,8 +13,6 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360)):
         return U_rep
     
     for obs in obstacleList:
-        if obs is None or len(obs) != 2:
-            continue
         obs_distance, obs_bearing = obs
         if obs_distance <= 0 or abs(obs_bearing) > np.pi/2:
             continue
