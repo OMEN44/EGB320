@@ -35,7 +35,7 @@ class Vision(Node):
         # self.pipeline = ["shelves", "aisleMarkers", "items", "colourMask", ""]
         # self.pipeline = ["items", "colourMask", "pickingStation"]
         # self.pipeline = ["test", "colourMask"]
-        self.pipeline = ["pickingStation", "pickingMarkers", "aisleMarkers", "items", "shelves", "colourMask"]
+        self.pipeline = ["pickingStation", "pickingMarkers", "aisleMarkers", "items", "shelves", "colourMask", "obstacles"]
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)
@@ -52,7 +52,7 @@ class Vision(Node):
         self.videoTimer = self.create_timer(timer_period, self.consumeFrame)
 
         # node variables
-        self.sink = setupFakeCam()
+        # self.sink = setupFakeCam()
         self.cap = setupCameraWithDefaults()
         self.colourMask = (np.array([70,0,0]), np.array([100, 255, 255]))
         self.areaLimit = [100, 500]

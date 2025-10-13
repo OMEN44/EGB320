@@ -1,19 +1,19 @@
 import cv2
 import numpy as np
 
-from robot.vision.utils import objectDistance, objectAngle
+from robot.vision.utils import getPoi
 
 def findObstacles(self, hsvFrame, outputFrame):
-    # make a mask for the color black
-    lower_black = np.array([60, 100, 0])
-    upper_black = np.array([95, 255, 255])
+    lower = np.array([60, 100, 0])
+    upper = np.array([95, 255, 255])
 
-    mask = cv2.inRange(hsvFrame, lower_black, upper_black)
+    mask = cv2.inRange(hsvFrame, lower, upper)
     # mask = cv2.inRange(hsvFrame, self.colourMask[0], self.colourMask[1])
 
     contours = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
 
-    data = []
+    ramps = []
+    people = []
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
@@ -23,19 +23,12 @@ def findObstacles(self, hsvFrame, outputFrame):
             if cv2.isContourConvex(approx):
                 x, y, w, h = cv2.boundingRect(approx)
 
-                distance = 0
-                angle = objectAngle(x + w / 2)
-                person = False
-
                 outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (0, 0, 255), 2)
                 if (w > h):
-                    distance = objectDistance(12, w)
+                    ramps.append(getPoi(12, w, x, self.calibration['new_k'][0,0]))
                     outputFrame = cv2.putText(outputFrame, f'R', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 else:
-                    person = True
-                    distance = objectDistance(5, w)
+                    people.append(getPoi(5, w, x, self.calibration['new_k'][0,0]))
                     outputFrame = cv2.putText(outputFrame, f'P', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-                data.append(f'{ "P" if person else "R"}: {distance}cm @ {angle}°')
-
-    return [outputFrame, data]
+    return [outputFrame, ramps, people]

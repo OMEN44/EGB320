@@ -13,7 +13,7 @@ FOCAL_LENGTH = (27 * 70) / 5.5 # undistorted frame
 # FOCAL_LENGTH = (120 * 26) / 7 # distorted frame
 FOV = 140
 
-HISTORY_LEN = 5
+HISTORY_LEN = 15
 
 K = np.array([[471.6658227413098, 0.0, 332.03119818185894], [0.0, 470.8943767328793, 217.66233465552523], [0.0, 0.0, 1.0]])
 D = np.array([[-0.09769440410102902], [0.012961725037653245], [0.08903099552070662], [-0.13551749872814936]])
@@ -142,16 +142,13 @@ def filterFalsePositives(history):
         return []
     
     pois = []
+    
+    
+    for poiList in history:
+        pass
 
-    # If the count increases for a single history entry, assume false positive
-    counts = [len(record) for record in history]
-    avg_count = int(sum(counts) / len(counts))
-    for record in history:
-        if len(record) <= avg_count:
-            for poi in record:
-                pois.append(poi)
 
-    print(counts, avg_count, len(pois))
+    # print(counts, avg_count, len(pois))
 
 
 

@@ -4,6 +4,7 @@ import numpy as np
 from std_msgs.msg import String
 from robot_interfaces.msg import Poi, PoiGroup
 
+from robot.vision.utils import HISTORY_LEN, filterFalsePositives, getEmptyPoi
 from robot.vision.isle_marker import findIsleMarkers, findPickingStationMarkers
 from robot.vision.colour_mask import proccess as mask
 from robot.vision.items import findItems
@@ -11,6 +12,8 @@ from robot.vision.shelves import findShelves
 from robot.vision.obstacles import findObstacles
 from robot.vision.test import findTestObject
 from robot.vision.pickingStation import findPickingStation
+
+PERSISTENCE_THRESHOLD = 4
 
 def proccess(self, frame):
 
@@ -32,6 +35,20 @@ def proccess(self, frame):
     for filter in self.pipeline:
         if filter == "aisleMarkers":
             [outputFrame, isleMarkers] = findIsleMarkers(self, hsvframe, outputFrame)
+            self.poiHistory['aisle_markers'].append(isleMarkers)
+            if len(self.poiHistory['aisle_markers']) > HISTORY_LEN:
+                self.poiHistory['aisle_markers'].pop(0)
+
+            draft = []
+
+            for i in range(len(isleMarkers)):
+                count = sum(previous[i].exists and isleMarkers[i].distance < previous[i].distance for previous in self.poiHistory['aisle_markers'])
+                if count > PERSISTENCE_THRESHOLD:
+                    draft.append(isleMarkers[i])
+                else:
+                    draft.append(self.poiHistory['aisle_markers'][-1][i] if len(self.poiHistory['aisle_markers']) > 1 else getEmptyPoi())
+
+            isleMarkers = draft
             poiMsg.aisle_markers = isleMarkers
         elif filter == "pickingMarkers":
             [outputFrame, pickingStationMarkers] = findPickingStationMarkers(self, hsvframe, outputFrame)
@@ -43,15 +60,14 @@ def proccess(self, frame):
             [outputFrame, items] = findItems(self, hsvframe, outputFrame)
             poiMsg.items = items
         elif filter == "obstacles":
-            [outputFrame, obstacles] = findObstacles(self, hsvframe, outputFrame)
-            poiMsg.obstacles = obstacles
+            [outputFrame, ramps, people] = findObstacles(self, hsvframe, outputFrame)
+            poiMsg.obstacles = people
+            poiMsg.ramps = ramps
         elif filter == "shelves":
             [outputFrame, shelves] = findShelves(self, hsvframe, outputFrame)
             poiMsg.shelves = shelves
         elif filter == "test":
             [outputFrame, tests] = findTestObject(self, hsvframe, outputFrame)
-            # data += tests
-        
         elif filter == "colourMask":
             outputFrame2 = mask(self, hsvframe, outputFrame2)
 
