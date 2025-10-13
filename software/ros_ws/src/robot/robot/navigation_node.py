@@ -80,6 +80,10 @@ class Navigation(Node):
         self.shelf_height = None  # Default shelf height level (1-5)
         self.picking_marker_index = None
 
+        self.picking_bay_bearing = None
+        self.shelf_bearing = None
+        self.out_of_aisle_bearing = None
+
         self.deliveries = []
         for picking_bay in [1, 2, 3]:
             shelf_first = random.randint(0, 5)   # first number 0–5
@@ -169,51 +173,81 @@ class Navigation(Node):
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
 
-    def move_to_marker_apf(self, target_marker, target_distance, next_state):
+    def move_to_marker_apf(self, goal, target_distance=None, next_state='IDLE',
+                       bearing_mode=False, bearing_threshold=np.radians(8)):
         """
-        Moves robot to a target marker using APF.
-        Stops robot and switches to next_state when within target_distance.
+        Move or align the robot using APF in the local frame.
+        - If bearing_mode=True, aligns to goal bearing and stops when within threshold.
+        - Uses local frame bearings (no IMU yaw).
+        - Transitions to next_state when aligned or within target_distance.
         """
-        if target_marker is None:
-            # If marker is not visible, gently rotate to search
-            self.publish_velocity(0.0, 0.15)
-            return
 
-        distance_to_marker = target_marker[0]
-        middle_bearing = target_marker[1][1]  # middle bearing only
+        # Ensure shelf data is valid
+        # if not self.shelves or not self.shelves[0] or len(self.shelves[0]) < 2:
+        #     self.get_logger().info("No shelves detected or invalid structure.")
+        #     self.publish_velocity(0.0, 0.15)
+        #     return
 
-        # Build obstacle list (middle bearings only)
+        # Build obstacle list
         all_obstacles = []
         for group in (self.obstacles, self.shelves):
             for obj in group:
                 all_obstacles.append((obj[0], obj[1][1]))  # distance, middle bearing
 
-        error = distance_to_marker - target_distance
+        # --- Attractive Field Goal ---
+        # Use goal (distance, bearing)
+        distance_to_goal = goal[0]
+        goal_bearing = goal[1]
+
+        # Local frame (theta = 0)
+        theta = 0.0
 
         # Calculate APF
         U_rep = apf.repulsiveField(all_obstacles, self.phi)
-        U_att = apf.attractiveField((distance_to_marker, middle_bearing), self.phi)
+        U_att = apf.attractiveField((distance_to_goal, goal_bearing), self.phi)
         best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
 
-        if best_bearing is not None:
-            theta = 0.0  # Local frame; use IMU if global coordinates
-            e_theta = apf.angle_wrap(best_bearing - theta)
-            k_omega = 0.3
-            v_max = 0.1
-            sigma = np.radians(30)
-            omega = k_omega * e_theta
-            v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-            self.publish_velocity(v, omega)
-        else:
-            # Gentle spin if no valid direction
+        # If no valid direction found, rotate gently
+        if best_bearing is None:
             self.publish_velocity(0.0, 0.15)
+            return
 
-        # Stop and switch state if within tolerance
-        if abs(error) < 0.01:
-            self.publish_velocity(0.0, 0.0)
-            self.state = next_state
-            self.get_logger().info(f"Reached target marker. Switching to {next_state}.")
-            
+        # --- Motion Control ---
+        e_theta = apf.angle_wrap(best_bearing - theta)
+        k_omega = 0.3
+        v_max = 0.1
+        sigma = np.radians(30)
+
+        omega = k_omega * e_theta
+        v = v_max * np.exp(-(e_theta**2) / (2 * sigma**2))
+        self.publish_velocity(v, omega)
+
+        # --- Stop Conditions ---
+        if bearing_mode:
+            # Stop once shelf's middle bearing is aligned within threshold
+            try:
+                middle_bearing = self.shelves[0][1][1]
+                if abs(middle_bearing) < bearing_threshold:
+                    self.publish_velocity(0.0, 0.0)
+                    self.state = next_state
+                    self.get_logger().info(
+                        f"Aligned within {np.degrees(bearing_threshold):.1f}°. Switching to {next_state}."
+                    )
+                    return
+            except Exception as e:
+                self.get_logger().warn(f"Error accessing shelf bearing: {e}")
+                return
+
+        # Optional: If distance-based stop mode is used
+        if target_distance is not None:
+            error = distance_to_goal - target_distance
+            if abs(error) < 0.01:
+                self.publish_velocity(0.0, 0.0)
+                self.state = next_state
+                self.get_logger().info(f"Reached target distance. Switching to {next_state}.")
+                return
+
+
     def get_arrays(self):
         self.shelves = self.pois["shelves"]
         self.items = self.pois["items"]
@@ -431,6 +465,7 @@ class Navigation(Node):
                 self.get_logger().info("Missing distance data for IMU calibration, retrying 'FIND_PICKING_BAY1'")
                 self.state = 'FIND_PICKING_BAY1'  # Retry if data is missing
         
+
         elif self.state == 'TURN_READY_TO_PICK_UP':
             target_heading = self.aisle_IMU + math.pi/2
             current_heading = imu.getYaw()  # <-- replace with your IMU API
@@ -455,24 +490,18 @@ class Navigation(Node):
                 self.state = 'DRIVE_TO_FRONT_OF_PICKING_STATION'
 
         elif self.state == 'DRIVE_TO_FRONT_OF_PICKING_STATION':
-            self.send_vision_data("pickingMarkers,shelves,obstacles", "")
+            self.send_vision_data("shelves,obstacles", "")
             self.get_arrays()  
             all_obstacles = []
-
-            for group in (self.obstacles, self.shelves):
-                if group:
-                    all_obstacles.extend(group)
-
             # --- 2. Determine reference bearing ---
             # Select shelf or picking bay bearings (whichever is detected)
             bearings = []
             # if self.shelves:
             #     bearings.extend([b for _, b in self.shelfRB])
-            if self.picking_stations:
-                bearings.extend([b for _, b in self.picking_stations])
+            if self.shelves:
+                bearings.extend([b for _, b in self.shelves])
 
-                ref_bearing = min(bearings)  # rightmost
-
+                ref_bearing = min(bearings)
                 # Offset the bearing by a few degrees (adjust sign & value as needed)
                 offset_deg = 10.0
                 offset = np.radians(offset_deg)
@@ -483,11 +512,10 @@ class Navigation(Node):
                 goal_bearing = imu.getYaw()
 
             # --- 3. Attractive field goal (bearing only) ---
-            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
-            goal = [goal_distance, goal_bearing]
+            goal = [None, goal_bearing]
+            self.move_to_marker_apf(goal, next_state='TURN_TO_PICKING_BAY', bearing_mode=True, bearing_threshold=self.picking_bay_bearing)
 
-            self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_TO_PICKING_BAY')
-
+            
         elif self.state == 'TURN_TO_PICKING_BAY':
             turn_speed = 0.14
             self.send_vision_data("pickingMarkers", "")
@@ -709,7 +737,7 @@ class Navigation(Node):
             self.send_vision_data("pickingMarkers", "")
             self.get_arrays()
             if (self.aisle_id != 2):
-                self.state = 'DRIVE_OUT_OF_AISLE3'
+                self.state = 'DRIVE_OUT_OF_AISLE_3'
             else:
                 target_marker = None
                 if self.picking_markers[self.picking_marker_index].exists is True:
@@ -760,7 +788,7 @@ class Navigation(Node):
                 self.publish_velocity(0.0, rotation_velocity)
 
         elif self.state == 'DRIVE_TO_FRONT_OF_AISLE_2':
-            self.send_vision_data("pickingMarkers,shelves,obstacles", "")
+            self.send_vision_data("shelves,obstacles", "")
             self.get_arrays()  
             all_obstacles = []
 
@@ -773,8 +801,8 @@ class Navigation(Node):
             bearings = []
             # if self.shelves:
             #     bearings.extend([b for _, b in self.shelfRB])
-            if self.picking_stations:
-                bearings.extend([b for _, b in self.picking_stations])
+            if self.shelves:
+                bearings.extend([b for _, b in self.shelves])
 
                 ref_bearing = max(bearings)  # rightmost
 
@@ -791,10 +819,10 @@ class Navigation(Node):
             goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
             goal = [goal_distance, goal_bearing]
 
-            self.move_to_marker_apf(goal, target_distance=1.5, next_state='TURN_READY_TO_PICK_UP')
+            self.move_to_marker_apf(goal, next_state='TURN_READY_TO_PICK_UP', bearing_mode=True, bearing_threshold=self.shelf_bearing)
 
-        elif self.state == 'DRIVE_OUT_OF_AISLE3':
-            target_heading = self.aisle_IMU - math.pi/2
+        elif self.state == 'TURN_OUT_OF_AISLE_3':
+            target_heading = self.aisle_IMU - math.pi
             current_heading = imu.getYaw()
             e_theta = apf.angle_wrap(target_heading - current_heading)
 
@@ -805,10 +833,45 @@ class Navigation(Node):
             if abs(np.degrees(e_theta)) < 0.4:  # close enough to target
                 self.publish_velocity(0.0, 0.0)
                 current_IMU = imu.getYaw()
-                self.aisle_imu = current_IMU + math.pi/2 # Recalibrate aisle IMU
-                self.state = 'TURN_READY_TO_PICK_UP'
+                self.aisle_imu = current_IMU + math.pi # Recalibrate aisle IMU
+                self.state = 'DRIVE_OUT_OF_AISLE_3'
             else:
                 self.publish_velocity(0.0, rotation_velocity)
+
+        elif self.state == 'DRIVE_OUT_OF_AISLE_3':
+            self.send_vision_data("shelves,obstacles", "")
+            self.get_arrays()  
+            all_obstacles = []
+
+            for group in (self.obstacles, self.shelves):
+                if group:
+                    all_obstacles.extend(group)
+
+            # --- 2. Determine reference bearing ---
+            # Select shelf or picking bay bearings (whichever is detected)
+            bearings = []
+            # if self.shelves:
+            #     bearings.extend([b for _, b in self.shelfRB])
+            if self.shelves:
+                bearings.extend([b for _, b in self.shelves])
+
+                bearings.sort()  # leftmost
+                ref_bearing = bearings[2]  # leftmost bearing
+
+                # Offset the bearing by a few degrees (adjust sign & value as needed)
+                offset_deg = 10.0
+                offset = np.radians(offset_deg)
+                goal_bearing = ref_bearing + offset
+            
+            else:
+                # Fallback: straight ahead
+                goal_bearing = imu.getYaw()
+
+            # --- 3. Attractive field goal (bearing only) ---
+            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
+            goal = [goal_distance, goal_bearing]
+
+            self.move_to_marker_apf(goal, next_state='TURN_READY_TO_PICK_UP', bearing_mode=True, bearing_threshold=self.out_of_aisle_bearing)
 
 
         elif self.state == 'DONE':
