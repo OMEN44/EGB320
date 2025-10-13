@@ -37,7 +37,8 @@ class Navigation(Node):
 
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
-        self.target_item_pub = self.create_publisher(String, '/target_item', 10)
+        self.arm_action_pub = self.create_publisher(Int32, '/arm_action', 10)
+        self.gripper_action_pub = self.create_publisher(Bool, '/gripper_action', 10)
         self.velocities_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
@@ -150,34 +151,22 @@ class Navigation(Node):
         twist_msg.linear.x = forward_vel
         twist_msg.angular.z = angular_vel
         self.velocities_pub.publish(twist_msg)
-        # self.get_logger().info(str(forward_vel))
-        # self.get_logger().info(str(angular_vel))
-        # self.get_logger().info("Twist message sent to mobility...")
 
-    def publish_collection(self, collection_command):
+    def publish_collection(self, level, open_grip):
         # Placeholder: implement gripper or collection action
-        collection_msg = Int32()
-        collection_msg.data = collection_command
-        self.collection_pub.publish(collection_msg)
-        # self.get_logger().info("Command sent to collection...")
+        arm_level = Int32() # Arm level 
+        gripper_state = Bool() # Gripper state (open/close)
+        arm_level.data = level
+        gripper_state.data = open_grip
+        self.arm_action_pub.publish(arm_level)
+        self.gripper_action_pub.publish(gripper_state)
 
     # --------------------------- Point of Interest callback ---------------------------
     def poi_callback(self, msg):
         self.pois = msg.pois
-        # for item in msg.pois:
-        #     self.pois.append((item.name, item.type, ((item.distance)/100000), [((item.bearing[0])/1000),((item.bearing[1])/1000), ((item.bearing[2])/1000)]))
 
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
-
-    # def filter_poi(self, poi_type):
-        
-    #     listOfPois = []
-    #     for poi in self.pois:
-    #         if poi_type == poi[0]:
-    #             listOfPois.append(poi)
-
-    #     return listOfPois
 
     def move_to_marker_apf(self, target_marker, target_distance, next_state):
         """
