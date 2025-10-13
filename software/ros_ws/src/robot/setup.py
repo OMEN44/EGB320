@@ -24,10 +24,9 @@ setup(
             'navigation = robot.navigation_node:main',
             'mobility = robot.mobility_node:main',
             'collection = robot.collection_node:main',
-            'test = robot.test_node:main',
-            'ramp = robot.drive_straight:main',
-            'speed = robot.nav_test:main', 
-            'turn = robot.turn_test:main'
+            'apfTest = robot.apf_test:main',
+            'imuTest = robot.cos_imu_test:main',
+            'apfOffsetTest = robot.offset_APF_test:main',
         ],
     },
 )
