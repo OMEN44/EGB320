@@ -37,6 +37,7 @@ class Navigation(Node):
 
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
+        self.target_item_pub = self.create_publisher(String, '/target_item', 10)
         self.arm_action_pub = self.create_publisher(Int32, '/arm_action', 10)
         self.gripper_action_pub = self.create_publisher(Bool, '/gripper_action', 10)
         self.velocities_pub = self.create_publisher(Twist, '/cmd_vel', 10)
@@ -68,6 +69,7 @@ class Navigation(Node):
         self.arm_status = False  
 
         self.zone_dist_aisle_marker = 1.24
+        self.picking_bay_marker_distance = 0.29  # meters between Bay 1 and Bay 2 markers
 
         self.picking_bay_index = None
         self.aisle_id = None
