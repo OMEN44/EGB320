@@ -52,7 +52,7 @@ class Vision(Node):
         self.videoTimer = self.create_timer(timer_period, self.consumeFrame)
 
         # node variables
-        # self.sink = setupFakeCam()
+        self.sink = setupFakeCam()
         self.cap = setupCameraWithDefaults()
         self.colourMask = (np.array([70,0,0]), np.array([100, 255, 255]))
         self.areaLimit = [100, 500]

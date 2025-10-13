@@ -4,7 +4,7 @@ import numpy as np
 from std_msgs.msg import String
 from robot_interfaces.msg import Poi, PoiGroup
 
-from robot.vision.utils import HISTORY_LEN, filterFalsePositives, getEmptyPoi
+from robot.vision.utils import HISTORY_LEN, PERSISTENCE_THRESHOLD, filterFalsePositives, getEmptyPoi
 from robot.vision.isle_marker import findIsleMarkers, findPickingStationMarkers
 from robot.vision.colour_mask import proccess as mask
 from robot.vision.items import findItems
@@ -12,8 +12,6 @@ from robot.vision.shelves import findShelves
 from robot.vision.obstacles import findObstacles
 from robot.vision.test import findTestObject
 from robot.vision.pickingStation import findPickingStation
-
-PERSISTENCE_THRESHOLD = 4
 
 def proccess(self, frame):
 
@@ -48,8 +46,7 @@ def proccess(self, frame):
                 else:
                     draft.append(self.poiHistory['aisle_markers'][-1][i] if len(self.poiHistory['aisle_markers']) > 1 else getEmptyPoi())
 
-            isleMarkers = draft
-            poiMsg.aisle_markers = isleMarkers
+            poiMsg.aisle_markers = draft
         elif filter == "pickingMarkers":
             [outputFrame, pickingStationMarkers] = findPickingStationMarkers(self, hsvframe, outputFrame)
             poiMsg.picking_markers = pickingStationMarkers

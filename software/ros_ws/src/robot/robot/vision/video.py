@@ -57,5 +57,5 @@ def useVideo(self, framePath=None):
         frames[i] = cv2.putText(frames[i], 'Filters:', (14, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         for j in range(len(self.pipeline)):
             frames[i] = cv2.putText(frames[i], self.pipeline[j], (14, 65 + 20 * j), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-        # self.sink[i].schedule_frame(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB))
-        cv2.imshow(f'Output {i}', frames[i])
+        self.sink[i].schedule_frame(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB))
+        # cv2.imshow(f'Output {i}', frames[i])

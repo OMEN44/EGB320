@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import String
 
-from robot.vision.utils import getPoi, getEmptyPoi
+from robot.vision.utils import getPoi, getEmptyPoi, HISTORY_LEN, PERSISTENCE_THRESHOLD
 
 isleMarkerCount = []
 
@@ -147,15 +147,35 @@ def findPickingStationMarkers(self, hsvFrame, outputFrame):
             else:
                 done = True
 
-    message = [getEmptyPoi(), getEmptyPoi(), getEmptyPoi()]
+    pickingStationMarkers = [getEmptyPoi(), getEmptyPoi(), getEmptyPoi()]
 
     for cluster in isleClusters:
         if cluster['count'] <= 3:
             cluster['average_width'] = cluster['average_width'] / cluster['count']
+            pickingStationMarkers[cluster['count'] - 1] = getPoi(5, cluster['average_width'], cluster['position'][0], self.calibration['new_k'][0,0])
+
+    
+    self.poiHistory['picking_markers'].append(pickingStationMarkers)
+    if len(self.poiHistory['picking_markers']) > HISTORY_LEN:
+        self.poiHistory['picking_markers'].pop(0)
+    l = len(self.poiHistory['picking_markers'])
+
+    draft = []
+    if l > 1:
+        for i in range(len(pickingStationMarkers)):
+            shouldExist = sum(self.poiHistory['picking_markers'][j][i].exists for j in range(l - 1)) > PERSISTENCE_THRESHOLD
+            print('marker', i, ', count', sum(self.poiHistory['picking_markers'][j][i].exists for j in range(l - 1)), shouldExist)
+            if shouldExist:
+                draft.append(pickingStationMarkers[i])
+            else:
+                draft.append(getEmptyPoi())
+                
+
+    for cluster in isleClusters:
+        if cluster['count'] <= 3 and draft[cluster['count'] - 1].exists:
             # draw a dot in the middle of each cluster and label with number of markers
             cv2.circle(outputFrame, (int(cluster['position'][0]), int(cluster['position'][1])), 5, (0, 0, 255), -1)
             cv2.putText(outputFrame, '{}'.format(str(cluster['count'])), (int(cluster['position'][0]) - 5, int(cluster['position'][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            
 
-            message[cluster['count'] - 1] = getPoi(5, cluster['average_width'], cluster['position'][0], self.calibration['new_k'][0,0])
-
-    return [outputFrame, message]
+    return [outputFrame, draft]

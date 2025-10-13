@@ -1,6 +1,4 @@
 from gpiozero import PWMOutputDevice, DigitalOutputDevice
-import time
-import numpy as np
 
 FORWARD = True
 REVERSE = False
