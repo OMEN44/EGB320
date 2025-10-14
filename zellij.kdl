@@ -5,9 +5,8 @@ layout cwd="~/perseus-v2" {
                 cwd "~/perseus-v2/software/web_ui"
                 args "dev"
             }
-            pane command="pixi" {
+            pane {
                 cwd "~/EGB320"
-                args "run" "bridge"
             }
         }
         pane split_direction="horizontal" {
@@ -22,10 +21,10 @@ layout cwd="~/perseus-v2" {
             }
             pane split_direction="vertical" {
                 pane {
-                    cwd "~/perseus-v2"
+                    cwd "~/EGB320"
                 }
                 pane {
-                    cwd "~/perseus-v2"
+                    cwd "~/EGB320"
                 }
             }
         }

@@ -4,6 +4,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32 # Import the Int32 message type
 from std_msgs.msg import Bool
+from std_msgs.msg import Float64MultiArray
 from robot_interfaces.msg import PoiGroup
 import time
 
@@ -18,6 +19,8 @@ class Navigation(Node):
         super().__init__('navigation_node')
         self.get_logger().info('Navigation node has been started.')
 
+        self.ref_bearing = None
+
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
         self.target_item_pub = self.create_publisher(String, '/target_item', 10)
@@ -27,6 +30,7 @@ class Navigation(Node):
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
+        self.imu_sum = self.create_subscription(Float64MultiArray, "/imu", self.imu_callback, 10)
         self.point_of_interest_sub = self.create_subscription(PoiGroup, "/poi", self.poi_callback, 10)
         self.arm_status_sub = self.create_subscription(Bool, "/arm_status", self.arm_status_callback, 10)
 
@@ -47,8 +51,16 @@ class Navigation(Node):
         self.arm_status = False  
         self.aisle_index = None
 
+        self.linear_accel = None
+        self.yaw = None
+        self.angular_rot = None 
 
     # --------------------------- Publish to vision (objects needed to be detected, target item/picking bay) ---------------------------
+    def imu_callback (self, msg):
+        self.linear_accel = msg.data[0]
+        self.yaw = msg.data[1]
+        self.angular_rot = msg.data[1] 
+    
     def send_vision_data(self, pipeline_string, target_item_data):
         pipeline_msg = String()
         pipeline_msg.data = pipeline_string
@@ -95,59 +107,68 @@ class Navigation(Node):
             self.state = 'APF'
 
         elif self.state == 'APF':
-            self.send_vision_data("shelves,obstacles", "")
-            all_obstacles = []
-
-            for group in (self.obstacles, self.shelves):
-                for obj in group:
-                    all_obstacles.append((obj.distance, obj.bearing[1]))
-            # --- 2. Determine reference bearing ---
-            # Select shelf or picking bay bearings (whichever is detected)
-            bearings = []
-            # if self.shelves:
-            #     bearings.extend([b for _, b in self.shelfRB])
-            if self.shelves:
-                bearings.extend([b for _, b in self.shelves])
-
-                ref_bearing = min(bearings)  # rightmost
-
-                # Offset the bearing by a few degrees (adjust sign & value as needed)
-                offset_deg = 10.0
-                offset = np.radians(offset_deg)
-                goal_bearing = ref_bearing - offset
+            self.send_vision_data("shelves,obstacles,pickingStation", "")
             
-            else:
-                # Fallback: straight ahead
-                goal_bearing = GET_YAW()
+            # --- 1. Collect obstacles ---
+            all_obstacles = []
+            for group in self.obstacles:
+                dist_m = group.distance / 1000.0
+                bearing_rad = group.bearing[1] / 1000.0  # ensure radians
+                all_obstacles.append((dist_m, bearing_rad))
 
-            # --- 3. Attractive field goal (bearing only) ---
-            goal_distance = 2.0  # Arbitrary far distance to form the attractive vector
+            for group in self.picking_station:
+                bearing_rad = group.bearing[1] / 1000.0  # ensure radians
+                
+                all_obstacles.append((dist_m, bearing_rad))
+
+            self.ref_bearing = None
+            for shelf in self.shelves:
+                dist_m = 0.5
+                bearing_rad = shelf.bearing[1] / 1000.0
+                # all_obstacles.append((dist_m, bearing_rad))
+                if self.ref_bearing is None:
+                    self.ref_bearing = shelf.bearing[0] / 1000.0
+
+
+            if len(self.shelves) == 0:
+                self.get_logger().info("No shelves detected — rotating to search.")
+                self.publish_velocity(0.0, -0.60)
+                return
+
+            # --- 2. Compute goal ---
+            offset = np.radians(6.0)
+            goal_bearing = self.ref_bearing - offset
+            goal_distance = 1
             goal = [goal_distance, goal_bearing]
 
+            # --- 3. Compute fields ---
             U_rep = apf.repulsiveField(all_obstacles, self.phi)
             U_att = apf.attractiveField(goal, self.phi)
             best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
 
+            # --- 4. Motion command ---
             if best_bearing is not None:
                 theta = 0.0
                 e_theta = apf.angle_wrap(best_bearing - theta)
 
-                k_omega = 0.7
-                v_max = 0.5
-                sigma = np.radians(30)
+                k_omega = 0.3
+                v_max = 0.25
+                sigma = np.radians(40)
 
                 omega = k_omega * e_theta
-                v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                v = v_max * np.exp(-(e_theta**2) / (2 * sigma**2))
                 self.publish_velocity(v, omega)
-                print("(" + str(v) + ", " + str(omega) + ")")
+                print(f"Driving (v={v:.2f}, ω={omega:.2f})")
             else:
+                print("No valid bearing found — rotating slowly.")
                 self.publish_velocity(0.0, 0.15)
 
-            tof_distance = GET_TOF_DISTANCE()  # Placeholder function to get distance from ToF sensor
-
+            # --- 5. Distance check ---
+            tof_distance = 0.7  # Placeholder
             if tof_distance < 0.6:
                 self.publish_velocity(0.0, 0.0)
                 self.state = 'DONE'
+
 
         elif self.state == 'DONE':
             self.publish_velocity(0.0, 0.0)

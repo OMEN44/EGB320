@@ -13,6 +13,9 @@ import numpy as np
 import math
 import random
 
+
+SUCCESS_COUNT_THRESHOLD = 3  # Number of consecutive successes required
+
 class Navigation(Node):
     def __init__(self):
         super().__init__('navigation_node')
@@ -35,6 +38,9 @@ class Navigation(Node):
         self.current_heading = 0.0
         self.target_heading = 0.0
 
+        self.success_count = 0
+        
+        
         self.timer_ = self.create_timer(0.001, self.state_machine)
 
         self.shelves = []
@@ -47,6 +53,8 @@ class Navigation(Node):
         self.arm_status = False  
         self.aisle_index = None
 
+
+        self.aisle_distances = [0.95, 0.67, 0.35, 0]
 
     # --------------------------- Publish to vision (objects needed to be detected, target item/picking bay) ---------------------------
     def send_vision_data(self, pipeline_string, target_item_data):
@@ -93,6 +101,7 @@ class Navigation(Node):
             # self.get_logger().info(str(self.state))
             if self.state == 'START':
                 self.aisle_index = None
+                self.success_count = 0
                 self.state = 'APF'
 
             elif self.state == 'APF':
@@ -107,48 +116,51 @@ class Navigation(Node):
                 # aisleBearing = math.degrees((self.aisle_markers[self.aisle_index].bearing[1])/1000)
                 aisleBearing = (self.aisle_markers[self.aisle_index].bearing[1])/1000
                 aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
-                goal = [aisleDistance, aisleBearing]
-                # print(goal)
-                all_obstacles = []
-                for i, group in enumerate(self.obstacles):
-                    # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
-                    all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
+                if self.aisle_markers[self.aisle_index].exists:
+                    if aisleDistance < ((self.aisle_distances[2]) + 0.15):
+                        self.success_count += 1
+                        if (self.success_count >= SUCCESS_COUNT_THRESHOLD):
+                            self.publish_velocity(0.0, 0.0)
+                            self.state = 'DONE'
+                    goal = [aisleDistance, aisleBearing]
+                    # print(goal)
+                    all_obstacles = []
+                    for i, group in enumerate(self.obstacles):
+                        # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
+                        all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
 
-                    # all_obstacles.append(((group.distance)/100000, (group.bearing[2])/1000))  # merge lists
+                        # all_obstacles.append(((group.distance)/100000, (group.bearing[2])/1000))  # merge lists
 
-                for i, group in enumerate(self.shelves):
-                        # all_obstacles.append((0.5, (group.bearing[0])/1000))  # merge lists
-                        all_obstacles.append((0.5, (group.bearing[1])/1000))  # merge lists
+                    for i, group in enumerate(self.shelves):
+                            # all_obstacles.append((0.5, (group.bearing[0])/1000))  # merge lists
+                            all_obstacles.append((0.5, (group.bearing[1])/1000))  # merge lists
 
-                        # all_obstacles.append((0.5/100000, (group.bearing[2])/1000))  # merge lists
+                            # all_obstacles.append((0.5/100000, (group.bearing[2])/1000))  # merge lists
 
 
-                U_rep = apf.repulsiveField(all_obstacles, self.phi)
-                U_att = apf.attractiveField(goal, self.phi)
-                print(all_obstacles)
-                best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
-                # print(best_bearing)
+                    U_rep = apf.repulsiveField(all_obstacles, self.phi)
+                    U_att = apf.attractiveField(goal, self.phi)
+                    # print(all_obstacles)
+                    best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+                    # print(best_bearing)
 
-                if best_bearing is not None:
-                    theta = 0.0
-                    e_theta = apf.angle_wrap(best_bearing - theta)
+                    if best_bearing is not None:
+                        theta = 0.0
+                        e_theta = apf.angle_wrap(best_bearing - theta)
 
-                    k_omega = 0.5
-                    v_max = 0.25
-                    sigma = np.radians(30)
+                        k_omega = 0.3
+                        v_max = 0.2
+                        sigma = np.radians(40)
 
-                    omega = -(k_omega * e_theta)
-                    v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-                    self.publish_velocity(v, omega)
-                    # print("(" + str(v) + ", " + str(omega) + ")")
-                    # print(v)
-                else:
-                    self.publish_velocity(0.0, 0.6)
-                    print("No valid bearing found, rotating...")
-
-                # if aisleDistance < 0.8:
-                #     self.publish_velocity(0.0, 0.0)
-                #     self.state = 'DONE'
+                        omega = -(k_omega * e_theta)
+                        v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                        self.publish_velocity(v, omega)
+                        # print("(" + str(v) + ", " + str(omega) + ")")
+                        # print(v)
+                    else:
+                        self.publish_velocity(0.0, 0.4)
+                        print("No valid bearing found, rotating...")
+                    print(aisleDistance)
 
             elif self.state == 'DONE':
                 self.publish_velocity(0.0, 0.0)

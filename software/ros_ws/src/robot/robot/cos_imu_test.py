@@ -130,7 +130,7 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.2)
                 
         elif self.state == 'CALCULATE_AISLE_IMU':
-            cos_D = (self.icking_bay_marker_distance**2 + self.distance_pickingbay2**2 - self.distance_pickingbay1**2) / (2 * self.distance_pickingbay2 * self.picking_bay_marker_distance)
+            cos_D = (self.picking_bay_marker_distance**2 + self.distance_pickingbay2**2 - self.distance_pickingbay1**2) / (2 * self.distance_pickingbay2 * self.picking_bay_marker_distance)
             # Numerical stability check (rounding errors may push value slightly out of [-1, 1])
             cos_D = max(-1, min(1, cos_D))
             # Return angle in radians

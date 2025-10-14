@@ -49,7 +49,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
 
         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        k_rep = 10
+        k_rep = 65
 
         # Smooth cosine decay for repulsion
         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
