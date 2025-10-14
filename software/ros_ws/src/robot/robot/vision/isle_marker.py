@@ -172,7 +172,7 @@ def findPickingStationMarkers(self, hsvFrame, outputFrame):
                 
 
     for cluster in isleClusters:
-        if cluster['count'] <= 3 and draft[cluster['count'] - 1].exists:
+        if cluster['count'] <= 3 and cluster['count'] > 0 and draft[cluster['count'] - 1].exists:
             # draw a dot in the middle of each cluster and label with number of markers
             cv2.circle(outputFrame, (int(cluster['position'][0]), int(cluster['position'][1])), 5, (0, 0, 255), -1)
             cv2.putText(outputFrame, '{}'.format(str(cluster['count'])), (int(cluster['position'][0]) - 5, int(cluster['position'][1]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)

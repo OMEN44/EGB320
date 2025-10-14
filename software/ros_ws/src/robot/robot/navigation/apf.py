@@ -2,7 +2,7 @@ import numpy as np
 import math
 import time  # Add if not present
 
-obstacle_width = 0.15  # meters
+obstacle_width = 0.25  # meters
 
 # ---------------------------
 # Potential fields
@@ -49,7 +49,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
 
         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
-        k_rep = 20
+        k_rep = 10
 
         # Smooth cosine decay for repulsion
         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2
@@ -59,14 +59,34 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
 
 
 
-# Attractive field towards target
+# # Attractive field towards target
+# def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
+#     if target is None:
+#         return np.zeros_like(phi)
+#     target_distance, target_bearing = target
+#     slope = target_distance / np.radians(max_bearing_deg)
+#     U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
+#     return U_att
+
 def attractiveField(target, phi=np.linspace(-np.pi, np.pi, 360), max_bearing_deg=90):
     if target is None:
         return np.zeros_like(phi)
+    
     target_distance, target_bearing = target
+    
+    # Ensure bearing in radians
+    target_bearing = np.radians(target_bearing) if abs(target_bearing) > np.pi else target_bearing
+    
+    # Compute slope
     slope = target_distance / np.radians(max_bearing_deg)
-    U_att = np.maximum(0.0, target_distance - np.abs(phi - target_bearing) * slope)
+    
+    # Proper angular difference
+    dphi = np.angle(np.exp(1j * (phi - target_bearing)))
+    
+    U_att = np.maximum(0.0, target_distance - np.abs(dphi) * slope)
     return U_att
+
+
 
 def bestBearing(U_att, U_rep, phi=np.linspace(-np.pi, np.pi, 360)):
     U_total = U_att - U_rep

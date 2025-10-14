@@ -89,52 +89,74 @@ class Navigation(Node):
 
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
-        self.get_logger().info(str(self.state))
-        if self.state == 'START':
-            self.aisle_index = None
-            self.state = 'APF'
+        try:
+            # self.get_logger().info(str(self.state))
+            if self.state == 'START':
+                self.aisle_index = None
+                self.state = 'APF'
 
-        elif self.state == 'APF':
-            self.send_vision_data("aisle_marker,obstacles,shelves", "")
-            for i, marker in self.aisle_markers:
-                if marker.exists:
-                    self.aisle_index = i
-                    break
-            aisleBearing = self.aisle_markers[self.aisle_index].bearing[1]
-            aisleDistance = self.aisle_markers[self.aisle_index].distance
-            goal = [aisleDistance, aisleBearing]
-            all_obstacles = []
-            for group in (self.obstacles, self.shelves):
-                for obj in group:
-                    all_obstacles.append((obj.distance, obj.bearing[1]))  # merge lists
-            U_rep = apf.repulsiveField(all_obstacles, self.phi)
-            U_att = apf.attractiveField(goal, self.phi)
-            best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+            elif self.state == 'APF':
+                self.send_vision_data("aisleMarkers,obstacles,shelves", "")
+                for i, marker in enumerate(self.aisle_markers):
+                    if marker.exists:
+                        self.aisle_index = i
+                        break
+                if self.aisle_index is None:
+                    self.publish_velocity(0.0, 0.7)
+                    return
+                # aisleBearing = math.degrees((self.aisle_markers[self.aisle_index].bearing[1])/1000)
+                aisleBearing = (self.aisle_markers[self.aisle_index].bearing[1])/1000
+                aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
+                goal = [aisleDistance, aisleBearing]
+                # print(goal)
+                all_obstacles = []
+                for i, group in enumerate(self.obstacles):
+                    # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
+                    all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
 
-            if best_bearing is not None:
-                theta = 0.0
-                e_theta = apf.angle_wrap(best_bearing - theta)
+                    # all_obstacles.append(((group.distance)/100000, (group.bearing[2])/1000))  # merge lists
 
-                k_omega = 0.7
-                v_max = 0.5
-                sigma = np.radians(30)
+                for i, group in enumerate(self.shelves):
+                        # all_obstacles.append((0.5, (group.bearing[0])/1000))  # merge lists
+                        all_obstacles.append((0.5, (group.bearing[1])/1000))  # merge lists
 
-                omega = k_omega * e_theta
-                v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-                self.publish_velocity(v, omega)
-                print("(" + str(v) + ", " + str(omega) + ")")
-            else:
-                self.publish_velocity(0.0, 0.15)
+                        # all_obstacles.append((0.5/100000, (group.bearing[2])/1000))  # merge lists
 
-            if aisleDistance < 1.3:
+
+                U_rep = apf.repulsiveField(all_obstacles, self.phi)
+                U_att = apf.attractiveField(goal, self.phi)
+                print(all_obstacles)
+                best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+                # print(best_bearing)
+
+                if best_bearing is not None:
+                    theta = 0.0
+                    e_theta = apf.angle_wrap(best_bearing - theta)
+
+                    k_omega = 0.5
+                    v_max = 0.25
+                    sigma = np.radians(30)
+
+                    omega = -(k_omega * e_theta)
+                    v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                    self.publish_velocity(v, omega)
+                    # print("(" + str(v) + ", " + str(omega) + ")")
+                    # print(v)
+                else:
+                    self.publish_velocity(0.0, 0.6)
+                    print("No valid bearing found, rotating...")
+
+                # if aisleDistance < 0.8:
+                #     self.publish_velocity(0.0, 0.0)
+                #     self.state = 'DONE'
+
+            elif self.state == 'DONE':
                 self.publish_velocity(0.0, 0.0)
-                self.state = 'DONE'
-
-        elif self.state == 'DONE':
+                self.get_logger().info("Task complete. Standing by...")
+        # ---------------------------------------------
+        except KeyboardInterrupt as e:
             self.publish_velocity(0.0, 0.0)
-            self.get_logger().info("Task complete. Standing by...")
-    # ---------------------------------------------
-
+            self.get_logger().error(f"Error in state machine: {e}")
 
 def main():
     rclpy.init()
