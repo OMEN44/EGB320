@@ -114,7 +114,7 @@ class Navigation(Node):
                     self.publish_velocity(0.0, 0.7)
                     return
                 # aisleBearing = math.degrees((self.aisle_markers[self.aisle_index].bearing[1])/1000)
-                aisleBearing = (self.aisle_markers[self.aisle_index].bearing[1])/1000
+                aisleBearing = ((self.aisle_markers[self.aisle_index].bearing[1])/1000) - math.radians(10) 
                 aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
                 if self.aisle_markers[self.aisle_index].exists:
                     if aisleDistance < ((self.aisle_distances[2]) + 0.15):

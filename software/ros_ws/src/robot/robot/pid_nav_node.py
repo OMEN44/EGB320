@@ -7,7 +7,6 @@ from std_msgs.msg import Bool
 from std_msgs.msg import Float64MultiArray
 from robot_interfaces.msg import PoiGroup
 from PiicoDev_MPU6050 import PiicoDev_MPU6050
-from PiicoDev_VL53L1X import PiicoDev_VL53L1X
 
 import robot.navigation.apf as apf
 from robot.mobility.status import statusLEDs
@@ -15,15 +14,12 @@ from robot.mobility.status import statusLEDs
 import numpy as np
 import time
 
-SUCCESS_THRESHOLD = 5  # Number of consecutive confirmations needed
-
 class Navigation(Node):
     def __init__(self):
         super().__init__('navigation_node')
         self.get_logger().info('Navigation node has been started.')
 
         self.ref_bearing = None
-        self.success_count = 0 
 
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
@@ -31,6 +27,7 @@ class Navigation(Node):
         self.arm_action_pub = self.create_publisher(Int32, '/arm_action', 10)
         self.gripper_action_pub = self.create_publisher(Bool, '/gripper_action', 10)
         self.velocities_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.skid_velocities_pub = self.create_publisher(Float64MultiArray, '/skid_cmd_vel', 10)
         self.collection_pub = self.create_publisher(Int32, '/collection_action', 10)
 
         # Subscribers
@@ -93,11 +90,12 @@ class Navigation(Node):
         self.search_start_rot_deg = 0.0  # degrees, taken from self.rot_z when starting search
         self.search_timeout_complete = False  # optional flag if you want to track failure
 
-        # Tof
-        self.tof_sensor = PiicoDev_VL53L1X()
+        # PID
+        self.integral = 0.0
+        self.e_prev = 0.0
+        self.time = time.time()
+        self.time_prev = time.time()
 
-    def get_distance(self):
-        return self.tof_sensor.read() / 1000
 
     # --------------------------- Publish to vision (objects needed to be detected, target item/picking bay) ---------------------------
     def imu_callback (self):
@@ -151,141 +149,71 @@ class Navigation(Node):
     def arm_status_callback(self, msg):
         self.arm_status = msg.data
 
+    def PID(self, Kp, Ki, Kd, setpoint, measurement):
+        # if (self.time - self.time_prev) == 0:
+        #     return 0
+
+        self.time = time.time()
+        offset = 0
+        # PID calculations
+        e = setpoint - measurement 
+        P = Kp*e
+        self.integral = self.integral + Ki*e*(self.time - self.time_prev)
+        D = Kd*(e - self.e_prev) / (self.time - self.time_prev)  # calculate manipulated variable - MV 
+        MV = offset + P + self.integral + D 
+        # update stored data for next iteration
+        self.e_prev = e
+        self.time_prev = self.time
+        return MV
+    
+    def bearing_to_angle(self, bearing):
+        angle = bearing / 1000 * 180 / np.pi # Convert radians to millidegrees
+        return angle
+
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
-        # self.get_logger().info(str(self.state))
+        self.get_logger().info(str(self.state))
         if self.state == 'START':
             self.aisle_index = None
-            self.state = 'APF'
+            self.state = 'PID'
 
-        elif self.state == 'APF':
-            self.send_vision_data("shelves,obstacles", "")
-            all_obstacles = []
+        elif self.state == 'PID':
+            self.send_vision_data("shelves,obstacles,pickingStation", "")
 
-            for i, group in enumerate(self.obstacles):
-                # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
-                all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
+            Kp = 0.0005
+            Ki = 0.0
+            Kd = 0.05
 
-            # --- 2. Determine reference bearing ---
-            # Select shelf or picking bay bearings (whichever is detected)
-            bearings = []
+            if len(self.shelves) > 0 and len(self.picking_station) > 0:
+                left_shelf_bearing = 100000 # large number
+                right_picking_bearing = -100000 # large negative number
+                for shelf in self.shelves:
+                    if shelf.bearing[0] < left_shelf_bearing:
+                        left_shelf_bearing = shelf.bearing[0]
+                for picking in self.picking_station:
+                    if picking.bearing[2] > right_picking_bearing:
+                        right_picking_bearing = picking.bearing[2]
 
-            for shelf in self.shelves:
-                # Use radians directly — remove the /1000 scaling
-                bearings.extend([shelf.bearing[0]/1000, shelf.bearing[1]/1000, shelf.bearing[2]/1000])
-
-            if len(bearings)!=0:
-                offset_deg = 20
-                self.ref_bearing = min(bearings)  # Choose smallest bearing (leftmost object)
-                goal_bearing = self.ref_bearing - np.radians(offset_deg)           
+                output = self.PID(Kp, Ki, Kd, 0, left_shelf_bearing + (right_picking_bearing - left_shelf_bearing) / 2)
+                # output = 0
+                scale = 0.5
+                self.skid_velocities_pub.publish(Float64MultiArray(data=[scale * output, scale * output]))
+                # turn_vel = max(0.4)
+                self.get_logger().info(f'left: {scale * output} right: {scale * output}')
             else:
-                goal_bearing = np.radians(40)
-                # self.ref_bearing = (group.bearing[0])/1000
-                # print(self.ref_bearing)
-                # all_obstacles.append((1.5, (group.bearing[1])/1000))  # merge lists
-            # if self.shelves:
-            #     bearings.extend([b for _, b in self.shelfRB])
-            # ref_bearing = bearings[0] # rightmost
-
-            # Offset the bearing by a few degrees (adjust sign & value as needed)
-            # offset_deg = 0.0
-            # offset = np.radians(offset_deg)
-            # goal_bearing = self.ref_bearing - offset
-            # print(np.degrees(goal_bearing))
-
-            # --- 3. Attractive field goal (bearing only) ---
-            goal_distance = 0.5  # Arbitrary far distance to form the attractive vector
-            goal = [goal_distance, goal_bearing]
-
-            U_rep = apf.repulsiveField(all_obstacles, self.phi)
-            U_att = apf.attractiveField(goal, self.phi)
-            best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
-
-            if best_bearing is not None:
-                theta = 0.0
-                e_theta = apf.angle_wrap(best_bearing - theta)
-
-                k_omega = 0.4
-                v_max = 0.2
-                sigma = np.radians(50)
-
-                omega = -(k_omega * e_theta)
-                v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-                self.publish_velocity(v, omega)
-                # print("(" + str(v) + ", " + str(omega) + ")")
-            else:
-                self.publish_velocity(0.0, 0.4)
-
-            tof_distance = self.get_distance() # in meters
-            # print(tof_distance)
-
-            if tof_distance < 0.6:
-                self.success_count += 1
-                if self.success_count >= SUCCESS_THRESHOLD:
-                    self.publish_velocity(0.0, 0.0)
-                    self.state = 'FIND_PICKING_BAY'
-                
-        elif self.state == 'FIND_PICKING_BAY':
-            self.send_vision_data("pickingMarkers,obstacles", "")
-            if len(self.picking_markers) != 0:
-                if self.picking_markers[1].exists:
-                    kp = 0.05
-                    markerBearing = np.degrees(self.picking_markers[1].bearing[1])
-                    rotation_velocity = kp * markerBearing 
-                    rotation_velocity = -(max(min(rotation_velocity, 0.55), -0.55))
-                    if abs(markerBearing) < 10:
-                        self.publish_velocity(0.0, 0.0)
-                        self.state = 'DRIVE_UP_BAY'
-                    else:
-                        self.publish_velocity(0.0, rotation_velocity)
+                if len(self.shelves) == 0: # No shelves detected
+                    self.skid_velocities_pub.publish(Float64MultiArray(data=[0.4, -0.4]))
+                    self.get_logger().info('No shelves detected, rotating to find shelves...')
+                elif len(self.picking_station) == 0: # No picking station detected
+                    self.skid_velocities_pub.publish(Float64MultiArray(data=[-0.4, 0.4]))
+                    self.get_logger().info('No picking station detected, moving forward to find picking station...')
                 else:
-                    self.publish_velocity(0.0, 0.55)
-            else:
-                self.publish_velocity(0.0, 0.55)
-
-        elif self.state == 'DRIVE_UP_BAY':
-            self.send_vision_data("pickingMarkers", "")
-            all_obstacles = []
-            if len(self.picking_markers) and self.picking_markers[1].exists:
-
-            # --- 3. Attractive field goal (bearing only) ---
-                goal_distance = self.picking_markers[1].distance/100000  # in meters
-                goal_bearing = self.picking_markers[1].bearing[1]/1000
-
-                goal = [goal_distance, goal_bearing]
-
-                U_rep = apf.repulsiveField(all_obstacles, self.phi)
-                U_att = apf.attractiveField(goal, self.phi)
-                best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
-
-                if best_bearing is not None:
-                    theta = 0.0
-                    e_theta = apf.angle_wrap(best_bearing - theta)
-
-                    k_omega = 0.4
-                    v_max = 0.2
-                    sigma = np.radians(50)
-
-                    omega = -(k_omega * e_theta)
-                    v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
-                    self.publish_velocity(v, omega)
-                else:
-                    self.publish_velocity(0.0, 0.4)
-
-                if goal_distance < 0.15:
-                    self.success_count += 1
-                    if self.success_count >= SUCCESS_THRESHOLD:
-                        self.publish_velocity(0.0, 0.0)
-                        self.state = 'DONE'
-            else:
-                self.publish_velocity(0.0, 0.4)
-                
-
+                    self.publish_velocity(0, 0.6) # Move forward
 
 
         elif self.state == 'DONE':
             self.publish_velocity(0.0, 0.0)
-            # self.get_logger().info("Task complete. Standing by...")
+            self.get_logger().info("Task complete. Standing by...")
     # ---------------------------------------------
 
 

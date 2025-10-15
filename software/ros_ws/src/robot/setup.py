@@ -27,6 +27,7 @@ setup(
             'apfTest = robot.apf_test:main',
             'imuTest = robot.cos_imu_test:main',
             'apfOffsetTest = robot.offset_APF_test:main',
+            'pid = robot.pid_nav_node:main',
         ],
     },
 )

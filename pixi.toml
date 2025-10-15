@@ -12,7 +12,7 @@ navigation = "ros2 run robot navigation"
 collection  = "ros2 run robot collection"
 mobility = "ros2 run robot mobility"
 test = "ros2 run robot test"
-
+pid = "ros2 run robot pid"
 
 [activation]
 scripts = ["install/setup.sh"]

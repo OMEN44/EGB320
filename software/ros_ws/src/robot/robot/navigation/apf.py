@@ -2,7 +2,7 @@ import numpy as np
 import math
 import time  # Add if not present
 
-obstacle_width = 0.25  # meters
+obstacle_width = 0.15  # meters
 
 # ---------------------------
 # Potential fields
@@ -33,7 +33,7 @@ obstacle_width = 0.25  # meters
 
 def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_width=0.3):
     U_rep = np.zeros_like(phi)
-    if not obstacleList:
+    if not obstacleList or len(obstacleList) == 0:
         return U_rep
 
     for obs in obstacleList:
@@ -50,6 +50,7 @@ def repulsiveField(obstacleList, phi=np.linspace(-np.pi, np.pi, 360), obstacle_w
         dphi = np.arcsin((obstacle_width / 2) / obs_distance) if obs_distance > (obstacle_width / 2) else np.pi / 2
         mask = (phi >= (obs_bearing - dphi)) & (phi <= (obs_bearing + dphi))
         k_rep = 65
+        # k_rep = 75
 
         # Smooth cosine decay for repulsion
         decay = np.cos((phi[mask] - obs_bearing) / dphi * (np.pi / 2)) ** 2

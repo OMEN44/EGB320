@@ -24,60 +24,17 @@ class Mobility(Node):
         self.lastTime = time.time()
         self.targetPwm = [0, 0]  # [left, right]
         self.currentPwm = [0, 0] # [left, right]
-        self.dt = 0.0005
+        self.dt = 0.00008
         self.count = 0
         self.sign = 1
 
         # Create 100ms timer
         self.mobilityTimer = self.create_timer(self.dt, self.timer_callback)
-        self.imuTimer = self.create_timer(.0000001, self.imu_callback)
 
         # Initialise subscribers
         self.subscription = self.create_subscription(Twist, '/cmd_vel', self.cmdCallBack, 10)
         self.subscription2 = self.create_subscription(TwistStamped, '/web_vel', self.cmdCallBack, 10)
-
-        # Initialise Publishers
-        self.imuPub = self.create_publisher(Float64MultiArray, '/imu', 10)
-
-        # IMU
-        self.imu = PiicoDev_MPU6050(addr=0x68)
-        self.t = time.time()
-
-        # Calibrate
-        count = 0
-        calibrationSteps = 100
-
-        self.Ax_bias = 0
-        self.Gz_bias = 0
-        self.rot_z = 0
-
-        self.get_logger().info('Calibrating IMU...')
-        while count < calibrationSteps:
-            accel = self.imu.read_accel_data() # read the accelerometer [ms^-2]
-            self.Ax_bias += accel["x"]
-
-            gyro = self.imu.read_gyro_data()   # read the gyro [deg/s]
-            self.Gz_bias += gyro["z"]
-            count += 1
-
-        self.Ax_bias /= calibrationSteps
-        self.Gz_bias /= calibrationSteps
-        self.get_logger().info('Calibration complete. Ax_bias=%.2f m/s², Gz_bias=%.2f °/s' % (self.Ax_bias, self.Gz_bias))
-
-    def imu_callback(self):
-        accel = self.imu.read_accel_data() # read the accelerometer [ms^-2]
-        aX = accel["x"] - self.Ax_bias
-        
-        gyro = self.imu.read_gyro_data()   # read the gyro [deg/s]
-        gZ = gyro["z"] - self.Gz_bias
-
-        now = time.time()
-        dt = now - self.t
-        self.t = now
-
-        self.rot_z += gZ * dt
-
-        self.imuPub.publish(Float64MultiArray(data=[aX, self.rot_z, gZ]))
+        self.subscriptionSkid = self.create_subscription(Float64MultiArray, '/skid_cmd_vel', self.skidCallback, 10)
     
     def twist_to_pwm(self, twist):
         v = twist.linear.x        # m/s
@@ -101,7 +58,6 @@ class Mobility(Node):
     def timer_callback(self):
         currentTime = time.time()
 
-
         if (currentTime - self.lastTime) >= self.dt:
             self.get_logger().info('Target PWM: left=%d, right=%d, current left=%d, right=%d' % (self.targetPwm[0], self.targetPwm[1], self.currentPwm[0], self.currentPwm[1]))
             self.lastTime = currentTime
@@ -118,6 +74,14 @@ class Mobility(Node):
             self.rightMotor.setSpeed(self.currentPwm[1])
             self.leftMotor.motorWrite()
             self.rightMotor.motorWrite()
+
+    def skidCallback(self, msg):
+        left_pwm = msg.data[0]
+        right_pwm = msg.data[1]
+        self.targetPwm[0] = int(left_pwm * self.gain[0] * 100)   # Scale to [-100, 100]
+        self.targetPwm[1] = int(right_pwm * self.gain[1] * 100)  # Scale to [-100, 100]
+        # self.get_logger().info('Received skid cmd_vel: left=%.2f, right=%.2f' % (left_pwm, right_pwm))
+        # self.get_logger().info('Converted to PWM: left=%d, right=%d' % (self.targetPwm[0], self.targetPwm[1]))
 
     def cmdCallBack(self, msg):
         left_pwm = 0
