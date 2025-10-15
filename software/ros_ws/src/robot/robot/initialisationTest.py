@@ -13,9 +13,11 @@ import robot.navigation.apf as apf
 from robot.mobility.status import statusLEDs
 
 import numpy as np
+import math
 import time
 
-SUCCESS_THRESHOLD = 5  # Number of consecutive confirmations needed
+SUCCESS_THRESHOLD = 8  # Number of consecutive confirmations needed
+BACK_PROOF_LIMIT = 30
 
 SUCCESS_COUNT_THRESHOLD = 3  # Number of consecutive successes required
 
@@ -24,10 +26,22 @@ class Navigation(Node):
         super().__init__('navigation_node')
         self.get_logger().info('Navigation node has been started.')
 
+        self.picking_marker_index = 0
+        self.picking_bay_distances= [0.95, 0.6, 0.3]  # Distances to picking bays in meters
+
+        self.back_proof_counter = 0
+
         self.tof_distance = None
+        self.ref_bearing = None
+        self.success_count = 0 
+
+        self.prev_tof_distance = None
+
 
         self.ref_bearing = None
         self.success_count = 0 
+
+        self.start_turn_imu = 0.0
 
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
@@ -69,7 +83,7 @@ class Navigation(Node):
         self.imu = PiicoDev_MPU6050(addr=0x68)
         self.t = time.time()
 
-        self.picking_marker_index = 2
+        self.picking_marker_index = 1
         self.picking_bay_distances= [0, 0.6, 0.9]  # Distances to picking bays in meters
 
         # Calibrate
@@ -161,11 +175,25 @@ class Navigation(Node):
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
         self.get_logger().info(str(self.state))
+        # print(self.gZ)
         if self.state == 'START':
             self.aisle_index = None
             self.success_count = 0
             self.tof_distance = 10  # Initialize with a large distance
-            self.state = 'DRIVE_TO_AISLE_FRONT'
+            self.state = 'FIND_AISLE_MARKER'
+
+        elif self.state == 'FIND_AISLE_MARKER':
+            self.send_vision_data("aisleMarkers", "")
+            for i, marker in enumerate(self.aisle_markers):
+                if marker.exists:
+                    self.aisle_index = i
+                    print(self.aisle_index)
+                    self.state = 'DRIVE_TO_AISLE_FRONT'
+                    # self.state = 'DONE'
+                    break
+            if self.aisle_index is None:
+                self.publish_velocity(0.0, 0.7)
+                return
 
 
         elif self.state == 'DRIVE_TO_AISLE_FRONT':
@@ -178,13 +206,15 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.7)
                 return
             # aisleBearing = math.degrees((self.aisle_markers[self.aisle_index].bearing[1])/1000)
-            aisleBearing = ((self.aisle_markers[self.aisle_index].bearing[1])/1000) - math.radians(10) 
+            aisleBearing = ((self.aisle_markers[self.aisle_index].bearing[1])/1000) 
             aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
             if self.aisle_markers[self.aisle_index].exists:
-                if aisleDistance < ((self.aisle_distances[2]) + 0.15):
+                if aisleDistance < (1.37):
                     self.success_count += 1
                     if (self.success_count >= SUCCESS_COUNT_THRESHOLD):
                         self.publish_velocity(0.0, 0.0)
+                        self.start_turn_imu = self.rot_z
+                        self.success_count = 0
                         self.state = 'TURN_TOWARDS_PICKING_BAY_DIR'
                 goal = [aisleDistance, aisleBearing]
                 # print(goal)
@@ -213,7 +243,7 @@ class Navigation(Node):
                     e_theta = apf.angle_wrap(best_bearing - theta)
 
                     k_omega = 0.3
-                    v_max = 0.2
+                    v_max = 0.3
                     sigma = np.radians(40)
 
                     omega = -(k_omega * e_theta)
@@ -224,33 +254,57 @@ class Navigation(Node):
                 else:
                     self.publish_velocity(0.0, 0.4)
                     print("No valid bearing found, rotating...")
-                print(aisleDistance)
 
         elif self.state == 'TURN_TOWARDS_PICKING_BAY_DIR':
-            target_heading = self.rot_z + np.radians(90)  # Turn 90 degrees from current heading
-            current_heading = self.rot_z  # Current heading from IMU
+            # Duration and angular velocity
+            turn_duration = 1  # seconds
+            angular_speed = 0.6  # rad/s (positive = left, negative = right)
 
-            e_theta = apf.angle_wrap(target_heading - current_heading)
+            # Start time tracking
+            if not hasattr(self, 'turn_start_time'):
+                self.turn_start_time = time.time()
+                self.get_logger().info(f"Starting timed turn for {turn_duration}s")
 
-            kp = 0.5  # Adjust gain as needed
-            rotation_velocity = kp * e_theta
-            rotation_velocity = -(max(min(rotation_velocity, 0.45), -0.45))
+            elapsed = time.time() - self.turn_start_time
 
-            if abs(np.degrees(e_theta)) < 5:  # close enough to target
-                self.publish_velocity(0.0, 0.0)
-                current_heading = self.rot_z
-                self.state = 'DRIVE_TO_BAY_FRONT'
+            if elapsed < turn_duration:
+                self.publish_velocity(0.0, angular_speed)
             else:
-                self.publish_velocity(0.0, rotation_velocity)
-                # print("Turning...")
+                # Stop turning after time elapsed
+                self.publish_velocity(0.0, 0.0)
+                self.get_logger().info("Timed turn complete.")
+                del self.turn_start_time  # reset for next time
+                self.state = 'DRIVE_TO_BAY_FRONT'  # replace with your desired next state
+
+            # target_heading = self.start_turn_imu - np.radians(90)  # Turn 90 degrees from current heading
+            # current_heading = self.rot_z  # Current heading from IMU
+
+            # e_theta = apf.angle_wrap(target_heading - current_heading)
+
+            # kp = 0.5  # Adjust gain as needed
+            # rotation_velocity = kp * e_theta
+            # rotation_velocity = -(max(min(rotation_velocity, 0.6), -0.6))
+
+            # if abs(np.degrees(e_theta)) < 10:  # close enough to target
+            #     self.publish_velocity(0.0, 0.0)
+            #     time.sleep(1.0)
+            #     # self.state = 'DRIVE_TO_BAY_FRONT'
+            #     self.state = 'DONE'
+            #     # shaan was here
+            # else:
+            #     self.publish_velocity(0.0, rotation_velocity)
+            #     # print("Turning...")
 
         elif self.state == 'DRIVE_TO_BAY_FRONT':
+            self.back_proof_counter += 1
+            # print(self.get_distance())
             self.send_vision_data("shelves,obstacles", "")
+            time.sleep(0.001)  # Allow time for vision to process
             all_obstacles = []
 
-            for i, group in enumerate(self.obstacles):
-                # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
-                all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
+            # for i, group in enumerate(self.obstacles):
+            #     # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
+            #     all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
 
             # --- 2. Determine reference bearing ---
             # Select shelf or picking bay bearings (whichever is detected)
@@ -266,25 +320,27 @@ class Navigation(Node):
                 goal_bearing = self.ref_bearing - np.radians(offset_deg)           
             else:
                 goal_bearing = np.radians(40)
-                # self.ref_bearing = (group.bearing[0])/1000
-                # print(self.ref_bearing)
-                # all_obstacles.append((1.5, (group.bearing[1])/1000))  # merge lists
-            # if self.shelves:
-            #     bearings.extend([b for _, b in self.shelfRB])
-            # ref_bearing = bearings[0] # rightmost
 
-            # Offset the bearing by a few degrees (adjust sign & value as needed)
-            # offset_deg = 0.0
-            # offset = np.radians(offset_deg)
-            # goal_bearing = self.ref_bearing - offset
-            # print(np.degrees(goal_bearing))
 
             # --- 3. Attractive field goal (bearing only) ---
             goal_distance = 0.5  # Arbitrary far distance to form the attractive vector
             goal = [goal_distance, goal_bearing]
-
-            if abs(np.degrees(goal_bearing)) < 10:
-                self.tof_distance = self.get_distance() # in meters
+            print(goal_bearing)
+            if abs(np.degrees(goal_bearing)) < 15:
+                if self.prev_tof_distance is None:
+                    self.prev_tof_distance = self.get_distance()
+                if (self.picking_marker_index == 2):
+                    stop_distance = self.picking_bay_distances[1]
+            stop_distance = self.picking_bay_distances[self.picking_marker_index]+0.1
+            if self.get_distance() < stop_distance:
+                self.success_count += 1
+                if self.success_count >= SUCCESS_THRESHOLD:
+                    if (self.picking_marker_index == 2):
+                        self.state = 'APF_PICKING_THREE'
+                    else:
+                        self.publish_velocity(0.0, 0.0)
+                        self.state = 'FIND_PICKING_BAY'
+                
 
             U_rep = apf.repulsiveField(all_obstacles, self.phi)
             U_att = apf.attractiveField(goal, self.phi)
@@ -297,7 +353,6 @@ class Navigation(Node):
                 k_omega = 0.4
                 v_max = 0.2
                 sigma = np.radians(50)
-
                 omega = -(k_omega * e_theta)
                 v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                 self.publish_velocity(v, omega)
@@ -306,22 +361,33 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.4)
 
             # print(tof_distance)
+            if (self.get_distance() is not None) and (self.prev_tof_distance is not None):
+                tof_distance_diff = abs(self.prev_tof_distance - self.get_distance())
+                if (self.get_distance()) == 0 or tof_distance_diff > 0.3:
+                    self.tof_sensor = PiicoDev_VL53L1X()
+                    return  # Skip this loop iteration if reading is invalid or changed too rapidly
+            
 
-            if self.tof_distance < self.picking_bay_distances[self.picking_marker_index]:
-                self.success_count += 1
-                if self.success_count >= SUCCESS_THRESHOLD:
-                    self.publish_velocity(0.0, 0.0)
-                    self.state = 'FIND_PICKING_BAY'
+            self.prev_tof_distance = self.get_distance()
                 
+        elif self.state == 'APF_PICKING_THREE':
+            self.publish_velocity(0.25, 0.0)
+            if self.get_distance() < self.picking_bay_distances[self.picking_marker_index]:
+                self.publish_velocity(0.0, 0.0)
+                self.success_count = 0
+                self.state = 'FIND_PICKING_BAY'
+
+        
         elif self.state == 'FIND_PICKING_BAY':
-            self.send_vision_data("pickingMarkers,obstacles", "")
+            self.send_vision_data("pickingMarkers", "")
+            time.sleep(0.001)
             if len(self.picking_markers) != 0:
                 if self.picking_markers[self.picking_marker_index].exists:
-                    kp = 0.05
+                    kp = 0.08
                     markerBearing = np.degrees(self.picking_markers[self.picking_marker_index].bearing[1])
                     rotation_velocity = kp * markerBearing 
-                    rotation_velocity = -(max(min(rotation_velocity, 0.5), -0.5))
-                    if abs(markerBearing) < 10:
+                    rotation_velocity = -(max(min(rotation_velocity, 0.55), -0.55))
+                    if abs(markerBearing) < 6:
                         self.publish_velocity(0.0, 0.0)
                         self.state = 'DRIVE_UP_BAY'
                     else:
@@ -333,6 +399,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_UP_BAY':
             self.send_vision_data("pickingMarkers", "")
+            time.sleep(0.001)
             all_obstacles = []
             if len(self.picking_markers) and self.picking_markers[self.picking_marker_index].exists:
 
@@ -356,18 +423,20 @@ class Navigation(Node):
 
                     omega = -(k_omega * e_theta)
                     v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                    # if (self.back_proof_counter >= BACK_PROOF_LIMIT):
+                    #     v = max(v, 0.0)  # Minimum forward speed
                     self.publish_velocity(v, omega)
+
                 else:
                     self.publish_velocity(0.0, 0.65)
                 self.tof_distance = self.get_distance() # in meters
-                if goal_distance < 0.15 or self.tof_distance < 0.35:
+                if goal_distance < 0.2 or self.tof_distance < 0.35:
                     self.success_count += 1
                     if self.success_count >= SUCCESS_THRESHOLD:
                         self.publish_velocity(0.0, 0.0)
                         self.state = 'DONE'
             else:
-                self.publish_velocity(0.0, 0.65)
-                
+                self.publish_velocity(0.0, 0.65)    
 
 
 

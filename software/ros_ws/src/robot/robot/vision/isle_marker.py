@@ -164,7 +164,7 @@ def findPickingStationMarkers(self, hsvFrame, outputFrame):
     if l > 1:
         for i in range(len(pickingStationMarkers)):
             shouldExist = sum(self.poiHistory['picking_markers'][j][i].exists for j in range(l - 1)) > PERSISTENCE_THRESHOLD
-            print('marker', i, ', count', sum(self.poiHistory['picking_markers'][j][i].exists for j in range(l - 1)), shouldExist)
+            # print('marker', i, ', count', sum(self.poiHistory['picking_markers'][j][i].exists for j in range(l - 1)), shouldExist)
             if shouldExist:
                 draft.append(pickingStationMarkers[i])
             else:

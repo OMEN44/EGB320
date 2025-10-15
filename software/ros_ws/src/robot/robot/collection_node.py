@@ -24,6 +24,8 @@ class CollectionNode(Node):
 
         # Setup servos
         self.arm = Servo180(channel=0, min_pulse=0.3)
+        self.gripper = Servo180(channel=1)
+        # self.gripper = Servo180(channel=1)
         self.gripper = Servo180(channel=1, min_pulse=0.75, max_pulse=2.4)
         self.arm.set_angle(0)
         self.gripper.set_angle(0)

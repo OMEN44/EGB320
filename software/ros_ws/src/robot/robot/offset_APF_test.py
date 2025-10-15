@@ -13,9 +13,11 @@ import robot.navigation.apf as apf
 from robot.mobility.status import statusLEDs
 
 import numpy as np
+import math
 import time
 
 SUCCESS_THRESHOLD = 5  # Number of consecutive confirmations needed
+BACK_PROOF_LIMIT = 30  # Number of cycles to confirm back-proofing
 
 class Navigation(Node):
     def __init__(self):
@@ -23,6 +25,8 @@ class Navigation(Node):
         self.get_logger().info('Navigation node has been started.')
 
         # self.tof_distance = None
+
+        self.back_proof_counter = 0
 
         self.ref_bearing = None
         self.success_count = 0 
@@ -69,8 +73,8 @@ class Navigation(Node):
         self.imu = PiicoDev_MPU6050(addr=0x68)
         self.t = time.time()
 
-        self.picking_marker_index = 0
-        self.picking_bay_distances= [0.95, 0.6, 0]  # Distances to picking bays in meters
+        self.picking_marker_index = 2
+        self.picking_bay_distances= [0.95, 0.6, 0.3]  # Distances to picking bays in meters
 
         # Calibrate
         count = 0
@@ -102,6 +106,7 @@ class Navigation(Node):
 
         # Tof
         self.tof_sensor = PiicoDev_VL53L1X()
+        self.leds.setGreen()
 
     def get_distance(self):
         return self.tof_sensor.read() / 1000
@@ -167,9 +172,10 @@ class Navigation(Node):
             self.state = 'APF'
 
         elif self.state == 'APF':
+            self.back_proof_counter += 1
             print(self.get_distance())
             self.send_vision_data("shelves,obstacles", "")
-            # time.sleep(0.001)  # Allow time for vision to process
+            time.sleep(0.001)  # Allow time for vision to process
             all_obstacles = []
 
             for i, group in enumerate(self.obstacles):
@@ -190,31 +196,26 @@ class Navigation(Node):
                 goal_bearing = self.ref_bearing - np.radians(offset_deg)           
             else:
                 goal_bearing = np.radians(40)
-                # self.ref_bearing = (group.bearing[0])/1000
-                # print(self.ref_bearing)
-                # all_obstacles.append((1.5, (group.bearing[1])/1000))  # merge lists
-            # if self.shelves:
-            #     bearings.extend([b for _, b in self.shelfRB])
-            # ref_bearing = bearings[0] # rightmost
 
-            # Offset the bearing by a few degrees (adjust sign & value as needed)
-            # offset_deg = 0.0
-            # offset = np.radians(offset_deg)
-            # goal_bearing = self.ref_bearing - offset
-            # print(np.degrees(goal_bearing))
 
             # --- 3. Attractive field goal (bearing only) ---
             goal_distance = 0.5  # Arbitrary far distance to form the attractive vector
             goal = [goal_distance, goal_bearing]
-
-            if abs(np.degrees(goal_bearing)) < 10:
+            print(goal_bearing)
+            if abs(np.degrees(goal_bearing)) < 15:
                 if self.prev_tof_distance is None:
                     self.prev_tof_distance = self.get_distance()
-                if self.get_distance() < self.picking_bay_distances[self.picking_marker_index]:
+                    stop_distance = self.picking_bay_distances[self.picking_marker_index]
+                if (self.picking_marker_index == 2):
+                    stop_distance = self.picking_bay_distances[1]
+                if self.get_distance() < stop_distance:
                     self.success_count += 1
                     if self.success_count >= SUCCESS_THRESHOLD:
-                        self.publish_velocity(0.0, 0.0)
-                        self.state = 'FIND_PICKING_BAY'
+                        if (self.picking_marker_index == 2):
+                            self.state = 'APF_PICKING_THREE'
+                        else:
+                            self.publish_velocity(0.0, 0.0)
+                            self.state = 'FIND_PICKING_BAY'
                 
 
             U_rep = apf.repulsiveField(all_obstacles, self.phi)
@@ -228,7 +229,6 @@ class Navigation(Node):
                 k_omega = 0.4
                 v_max = 0.2
                 sigma = np.radians(50)
-
                 omega = -(k_omega * e_theta)
                 v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                 self.publish_velocity(v, omega)
@@ -246,9 +246,17 @@ class Navigation(Node):
 
             self.prev_tof_distance = self.get_distance()
                 
+        elif self.state == 'APF_PICKING_THREE':
+            self.publish_velocity(0.25, 0.0)
+            if self.get_distance() < self.picking_bay_distances[self.picking_marker_index]:
+                self.publish_velocity(0.0, 0.0)
+                self.success_count = 0
+                self.state = 'FIND_PICKING_BAY'
+
+        
         elif self.state == 'FIND_PICKING_BAY':
             self.send_vision_data("pickingMarkers", "")
-            # time.sleep(0.001)
+            time.sleep(0.001)
             if len(self.picking_markers) != 0:
                 if self.picking_markers[self.picking_marker_index].exists:
                     kp = 0.05
@@ -267,7 +275,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_UP_BAY':
             self.send_vision_data("pickingMarkers", "")
-            # time.sleep(0.001)
+            time.sleep(0.001)
             all_obstacles = []
             if len(self.picking_markers) and self.picking_markers[self.picking_marker_index].exists:
 
@@ -291,11 +299,14 @@ class Navigation(Node):
 
                     omega = -(k_omega * e_theta)
                     v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                    if (self.back_proof_counter >= BACK_PROOF_LIMIT):
+                        v = max(v, 0.0)  # Minimum forward speed
                     self.publish_velocity(v, omega)
+
                 else:
                     self.publish_velocity(0.0, 0.65)
                 self.tof_distance = self.get_distance() # in meters
-                if goal_distance < 0.15 or self.tof_distance < 0.35:
+                if goal_distance < 0.2 and self.tof_distance < 0.35:
                     self.success_count += 1
                     if self.success_count >= SUCCESS_THRESHOLD:
                         self.publish_velocity(0.0, 0.0)

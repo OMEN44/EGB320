@@ -35,6 +35,16 @@ def findShelves(self, hsvFrame, outputFrame):
 
             data.append(getPoi(-1, w, x, self.calibration['new_k'][0,0]))
 
+    # for shelf in rects:
+    #     inside = False
+    #     for other in rects:
+    #         if shelf != other:
+    #             x_shelf, y_shelf, w_shelf, h_shelf = shelf
+    #             x_other, y_other, w_other, h_other = other
+    #             if (x_other < x_shelf and x_shelf < x_other + w_other) and (x_other + w_other):
+
+
+
     self.poiHistory['shelves'].append(data)
     if (len(self.poiHistory['shelves']) > HISTORY_LEN):
         self.poiHistory['shelves'].pop(0)
