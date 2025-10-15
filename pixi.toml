@@ -18,8 +18,7 @@ pid = "ros2 run robot pid"
 scripts = ["install/setup.sh"]
 
 [dependencies]
-ros-jazzy-desktop = ">=0.11.0,<0.12"
-ros-jazzy-turtlesim = ">=1.8.3,<2"
+ros-jazzy-ros-base = ">=0.11.0,<0.12"
 colcon-common-extensions = ">=0.3.0,<0.4"
 setuptools = "<=58.2.0"
 pkg-config = ">=0.29.2,<0.30"
@@ -27,8 +26,8 @@ ros-jazzy-rosbridge-suite = ">=2.1.0,<3"
 scipy = ">=1.16.2,<2"
 
 [pypi-dependencies]
-# lgpio = ">=0.2.2.0, <0.3"
-# gpiozero = ">=2.0.1, <3"
+lgpio = ">=0.2.2.0, <0.3"
+gpiozero = ">=2.0.1, <3"
 pyfakewebcam = ">=0.1.0, <0.2"
 opencv-python = "*"
 smbus = ">=1.1.post2, <2"

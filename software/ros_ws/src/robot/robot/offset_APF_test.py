@@ -22,8 +22,12 @@ class Navigation(Node):
         super().__init__('navigation_node')
         self.get_logger().info('Navigation node has been started.')
 
+        # self.tof_distance = None
+
         self.ref_bearing = None
         self.success_count = 0 
+
+        self.prev_tof_distance = None
 
         # Publishers
         self.pipeline_pub = self.create_publisher(String, '/pipeline_filters', 10)
@@ -64,6 +68,9 @@ class Navigation(Node):
         # IMU
         self.imu = PiicoDev_MPU6050(addr=0x68)
         self.t = time.time()
+
+        self.picking_marker_index = 0
+        self.picking_bay_distances= [0.95, 0.6, 0]  # Distances to picking bays in meters
 
         # Calibrate
         count = 0
@@ -153,13 +160,16 @@ class Navigation(Node):
 
     # ---------------- STATE MACHINE --------------
     def state_machine(self):
-        # self.get_logger().info(str(self.state))
+        self.get_logger().info(str(self.state))
         if self.state == 'START':
             self.aisle_index = None
+            self.success_count = 0
             self.state = 'APF'
 
         elif self.state == 'APF':
+            print(self.get_distance())
             self.send_vision_data("shelves,obstacles", "")
+            # time.sleep(0.001)  # Allow time for vision to process
             all_obstacles = []
 
             for i, group in enumerate(self.obstacles):
@@ -197,6 +207,16 @@ class Navigation(Node):
             goal_distance = 0.5  # Arbitrary far distance to form the attractive vector
             goal = [goal_distance, goal_bearing]
 
+            if abs(np.degrees(goal_bearing)) < 10:
+                if self.prev_tof_distance is None:
+                    self.prev_tof_distance = self.get_distance()
+                if self.get_distance() < self.picking_bay_distances[self.picking_marker_index]:
+                    self.success_count += 1
+                    if self.success_count >= SUCCESS_THRESHOLD:
+                        self.publish_velocity(0.0, 0.0)
+                        self.state = 'FIND_PICKING_BAY'
+                
+
             U_rep = apf.repulsiveField(all_obstacles, self.phi)
             U_att = apf.attractiveField(goal, self.phi)
             best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
@@ -216,41 +236,44 @@ class Navigation(Node):
             else:
                 self.publish_velocity(0.0, 0.4)
 
-            tof_distance = self.get_distance() # in meters
             # print(tof_distance)
+            if (self.get_distance() is not None) and (self.prev_tof_distance is not None):
+                tof_distance_diff = abs(self.prev_tof_distance - self.get_distance())
+                if (self.get_distance()) == 0 or tof_distance_diff > 0.3:
+                    self.tof_sensor = PiicoDev_VL53L1X()
+                    return  # Skip this loop iteration if reading is invalid or changed too rapidly
+            
 
-            if tof_distance < 0.6:
-                self.success_count += 1
-                if self.success_count >= SUCCESS_THRESHOLD:
-                    self.publish_velocity(0.0, 0.0)
-                    self.state = 'FIND_PICKING_BAY'
+            self.prev_tof_distance = self.get_distance()
                 
         elif self.state == 'FIND_PICKING_BAY':
-            self.send_vision_data("pickingMarkers,obstacles", "")
+            self.send_vision_data("pickingMarkers", "")
+            # time.sleep(0.001)
             if len(self.picking_markers) != 0:
-                if self.picking_markers[1].exists:
+                if self.picking_markers[self.picking_marker_index].exists:
                     kp = 0.05
-                    markerBearing = np.degrees(self.picking_markers[1].bearing[1])
+                    markerBearing = np.degrees(self.picking_markers[self.picking_marker_index].bearing[1])
                     rotation_velocity = kp * markerBearing 
-                    rotation_velocity = -(max(min(rotation_velocity, 0.55), -0.55))
+                    rotation_velocity = -(max(min(rotation_velocity, 0.5), -0.5))
                     if abs(markerBearing) < 10:
                         self.publish_velocity(0.0, 0.0)
                         self.state = 'DRIVE_UP_BAY'
                     else:
                         self.publish_velocity(0.0, rotation_velocity)
                 else:
-                    self.publish_velocity(0.0, 0.55)
+                    self.publish_velocity(0.0, 0.65)
             else:
-                self.publish_velocity(0.0, 0.55)
+                self.publish_velocity(0.0, 0.65)
 
         elif self.state == 'DRIVE_UP_BAY':
             self.send_vision_data("pickingMarkers", "")
+            # time.sleep(0.001)
             all_obstacles = []
-            if len(self.picking_markers) and self.picking_markers[1].exists:
+            if len(self.picking_markers) and self.picking_markers[self.picking_marker_index].exists:
 
             # --- 3. Attractive field goal (bearing only) ---
-                goal_distance = self.picking_markers[1].distance/100000  # in meters
-                goal_bearing = self.picking_markers[1].bearing[1]/1000
+                goal_distance = self.picking_markers[self.picking_marker_index].distance/100000  # in meters
+                goal_bearing = self.picking_markers[self.picking_marker_index].bearing[1]/1000
 
                 goal = [goal_distance, goal_bearing]
 
@@ -263,22 +286,22 @@ class Navigation(Node):
                     e_theta = apf.angle_wrap(best_bearing - theta)
 
                     k_omega = 0.4
-                    v_max = 0.2
+                    v_max = 0.25
                     sigma = np.radians(50)
 
                     omega = -(k_omega * e_theta)
                     v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                     self.publish_velocity(v, omega)
                 else:
-                    self.publish_velocity(0.0, 0.4)
-
-                if goal_distance < 0.15:
+                    self.publish_velocity(0.0, 0.65)
+                self.tof_distance = self.get_distance() # in meters
+                if goal_distance < 0.15 or self.tof_distance < 0.35:
                     self.success_count += 1
                     if self.success_count >= SUCCESS_THRESHOLD:
                         self.publish_velocity(0.0, 0.0)
                         self.state = 'DONE'
             else:
-                self.publish_velocity(0.0, 0.4)
+                self.publish_velocity(0.0, 0.65)
                 
 
 
