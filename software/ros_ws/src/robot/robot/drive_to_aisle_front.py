@@ -17,7 +17,7 @@ import math
 import time
 import json
 
-SUCCESS_THRESHOLD = 6 # Number of consecutive confirmations needed
+SUCCESS_THRESHOLD = 5 # Number of consecutive confirmations needed
 BACK_PROOF_LIMIT = 30
 
 SUCCESS_COUNT_THRESHOLD = 10  # Number of consecutive successes required
@@ -41,6 +41,7 @@ class Navigation(Node):
 
         self.ref_bearing = None
         self.success_count = 0 
+
 
         self.start_turn_imu = 0.0
 
@@ -140,6 +141,9 @@ class Navigation(Node):
         self.aisle_turn_direction = None
         self.shelf_turn_direction = None
 
+        self.return_zone_distance = 0.5
+        self.turn_angle = 0
+
         # Tof
         self.tof_sensor = PiicoDev_VL53L1X()
 
@@ -237,8 +241,15 @@ class Navigation(Node):
         # self.get_logger().info(str(self.state))
         # print(self.gZ)
         if self.state == 'START':
+            self.turn_angle = - 175
+            self.state = 'RETURN_ZONE_DYNAMIC'
+
+
             # self.send_vision_data("aisleMarkers", "")
-            time.sleep(0.001)
+            # self.prev_imu = self.rot_z  
+            # self.target_angle = self.prev_imu - 175
+            # self.state = '180_TURN'
+            # time.sleep(0.001)
             # self.publish_velocity(0.0, 0.7)
             # for marker in self.aisle_markers:
             #     self.nav_status_pub.publish(String(data=f"{(marker.distance)/100000:.2f}"))
@@ -367,11 +378,14 @@ class Navigation(Node):
                 self.get_logger().info("Timed turn complete.")
                 del self.turn_start_time  # reset for next time
                 time.sleep(0.1)
+                self.return_zone_distance = 0.6
                 self.state = 'DRIVE_TO_BAY_FRONT'  # replace with your desired next state
                 
 
         elif self.state == 'DRIVE_TO_BAY_FRONT':
             self.back_proof_counter += 1
+            # sign = self.return_zone_distance / abs(self.return_zone_distance)
+            
             stop_distance = self.picking_bay_distance 
             # print(self.get_distance())
             self.send_vision_data("shelves,obstacles", "")
@@ -385,8 +399,9 @@ class Navigation(Node):
                 bearings.extend([shelf.bearing[0]/1000, shelf.bearing[1]/1000, shelf.bearing[2]/1000])
 
             if len(bearings)!=0:
-                offset_deg = 10
+                offset_deg = 10 
                 self.ref_bearing = min(bearings)  # Choose smallest bearing (leftmost object)
+
                 goal_bearing = self.ref_bearing - np.radians(offset_deg)           
             else:
                 goal_bearing = np.radians(40)
@@ -552,20 +567,28 @@ class Navigation(Node):
                         self.publish_velocity(0.0, 0.0)
                         self.aisle_index = None
                         self.prev_imu = self.rot_z  
-                        self.target_angle = self.prev_imu - 180
-                        self.state = '180_TURN'
+                        self.target_angle = self.prev_imu - 175
+                        # self.state = '180_TURN'
+                        self.state = 'REVERSE_OUT'
                 else:
                     self.success_count = 0
             else:
                 self.publish_velocity(0.0, 0.65)    
+            
+        elif self.state == 'REVERSE_OUT':
+            self.publish_velocity(-0.2, 0.0)
+            if self.get_distance() > 0.5:
+                self.state = 'DONE'
+
 
         elif self.state == '180_TURN':
-            self.get_logger().info(f'{self.rot_z}, {self.target_angle}, {self.target_angle > self.rot_z}')
+            # self.nav_status_pub.publish(String(data=f"Distance: {self.get_distance():.2f}"))
+            self.nav_status_pub.publish(String(data=f"IMU VAL: {self.rot_z}, TARGET: {self.target_angle}, CONDITION: {self.target_angle > self.rot_z}"))
             if self.target_angle < self.rot_z:
                 self.publish_velocity(0.0, 0.7)
             else:
                 self.publish_velocity(0.0, 0.0)
-                time.sleep(0.1)
+                time.sleep(1.0)
                 self.state = 'DONE'
 
         elif self.state == 'BACK_TO_RETURN_ZONE':
@@ -638,7 +661,114 @@ class Navigation(Node):
                     self.publish_velocity(0.0, 0.4)
                     print("No valid bearing found, rotating...")
 
+        elif self.state == 'RETURN_ZONE_DYNAMIC':
+            self.back_proof_counter += 1
+            sign = self.return_zone_distance / abs(self.return_zone_distance)
+            
+            stop_distance = abs(self.return_zone_distance) + 0.1
+            # print(self.get_distance())
+            self.send_vision_data("shelves,obstacles", "")
+            time.sleep(0.001)  # Allow time for vision to process
+            all_obstacles = []
 
+            bearings = []
+
+            for shelf in self.shelves:
+                # Use radians directly — remove the /1000 scaling
+                bearings.extend([shelf.bearing[0]/1000, shelf.bearing[1]/1000, shelf.bearing[2]/1000])
+
+            if len(bearings)!=0:
+                offset_deg = 15 * sign
+                if sign > 0:
+                    self.ref_bearing = min(bearings)  # Choose smallest bearing (leftmost object)
+                else:
+                    self.ref_bearing = max(bearings)  # Choose largest bearing (rightmost object)
+
+                goal_bearing = self.ref_bearing - np.radians(offset_deg)           
+            else:
+                goal_bearing = np.radians(40*sign)
+
+
+            # --- 3. Attractive field goal (bearing only) ---
+            goal_distance = 0.5  # Arbitrary far distance to form the attractive vector
+            goal = [goal_distance, goal_bearing]
+            print(goal_bearing)
+            if abs(np.degrees(goal_bearing)) < 15:
+                if self.prev_tof_distance is None:
+                    self.prev_tof_distance = self.get_distance()
+            self.nav_status_pub.publish(String(data=f"Distance: {self.get_distance():.2f} m, Condition: {self.get_distance() < stop_distance}, Success: {self.success_count}"))
+
+            if self.get_distance() < self.picking_bay_distances[1]:
+                self.publish_velocity(0.15, 0.05 * sign)
+                self.nav_status_pub.publish(String(data=f"HELLO"))
+                # if self.get_distance() < stop_distance:
+                #     self.success_count += 1
+                #     if self.success_count >= SUCCESS_THRESHOLD:
+                #         self.publish_velocity(0.0, 0.0)  # Ensure stop before any transition
+                #         self.state = 'DONE'    
+            
+            else:
+                U_rep = apf.repulsiveField(all_obstacles, self.phi)
+                U_att = apf.attractiveField(goal, self.phi)
+                best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+
+                if best_bearing is not None:
+                    theta = 0.0
+                    e_theta = apf.angle_wrap(best_bearing - theta)
+
+                    k_omega = 0.3
+                    v_max = 0.15
+                    sigma = np.radians(40)
+                    omega = -(k_omega * e_theta)
+                    v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                    self.publish_velocity(v, omega)
+                    # print("(" + str(v) + ", " + str(omega) + ")")
+                else:
+                    self.publish_velocity(0.0, 0.4)
+
+                # print(tof_distance)
+                if (self.get_distance() is not None) and (self.prev_tof_distance is not None):
+                    tof_distance_diff = abs(self.prev_tof_distance - self.get_distance())
+                    if (self.get_distance()) == 0 or tof_distance_diff > 0.3:
+                        self.tof_sensor = PiicoDev_VL53L1X()
+                        return  # Skip this loop iteration if reading is invalid or changed too rapidly
+
+            if self.get_distance() < stop_distance:
+                self.success_count += 1
+                if self.success_count >= SUCCESS_THRESHOLD:
+                    self.publish_velocity(0.0, 0.0)  # Ensure stop before any transition
+                    self.nav_status_pub.publish(String(data=f"Distance: {self.get_distance():.2f}"))
+                    # self.state = 'TURN_90_DEG'
+                    # self.turn_angle = -85
+                    time.sleep(1.5)
+                    self.return_zone_distance *= -1  
+                    self.prev_imu = self.rot_z  
+                    self.state = 'TURN_DYNAMIC'
+
+            else:
+                self.success_count = 0           
+    
+            self.prev_tof_distance = self.get_distance()
+
+
+        elif self.state == 'TURN_DYNAMIC': # - 175 when turning 180 degrees
+            self.target_angle = self.prev_imu + self.turn_angle     
+            sign = self.target_angle / abs(self.target_angle)       
+            self.get_logger().info(f'{self.rot_z}, {self.target_angle}, {self.target_angle > self.rot_z}')
+            
+            turn_condition = False
+            if self.turn_angle < 0:
+                turn_condition = self.target_angle < self.rot_z
+            else:
+                turn_condition = self.target_angle > self.rot_z
+            
+            if turn_condition:
+                self.publish_velocity(0.0, -sign * 0.7)
+            else:
+                self.publish_velocity(0.0, 0.0)
+                time.sleep(0.1)
+                self.state = 'RETURN_ZONE_DYNAMIC'
+                
 
         elif self.state == 'DONE':
             self.publish_velocity(0.0, 0.0)
