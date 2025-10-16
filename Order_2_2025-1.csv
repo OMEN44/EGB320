@@ -1,4 +1,5 @@
 Item Number,Picking Station,Shelf,Bay,Height,Item Name
+0,2,5,2,2,Cube
 1,1,5,3,2,Bowl
 2,2,3,1,1,Bottle
 3,3,0,0,0, Cube

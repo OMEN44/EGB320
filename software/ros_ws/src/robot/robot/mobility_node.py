@@ -42,7 +42,7 @@ class Mobility(Node):
 
         # wheel linear velocities (m/s)
         v_r = v + (w * WHEEL_BASE) / 2.0
-        v_l = v * 2 - v_r
+        v_l = v - (w * WHEEL_BASE) / 2.0
         # self.get_logger().info('Wheel velocities: v_l=%.2f m/s, v_r=%.2f m/s' % (v_l, v_r))
 
         # scale to [-1, 1] by dividing by MAX_FORWARD_VEL
@@ -65,9 +65,9 @@ class Mobility(Node):
             # Smoothly update currentPwm towards targetPwm
             for i in range(2):
                 if self.currentPwm[i] < self.targetPwm[i]:
-                    self.currentPwm[i] += 1
+                    self.currentPwm[i] += 2
                 elif self.currentPwm[i] > self.targetPwm[i]:
-                    self.currentPwm[i] -= 1
+                    self.currentPwm[i] -= 2
 
             # Update motor speeds
             self.leftMotor.setSpeed(self.flipLeft * self.currentPwm[0])

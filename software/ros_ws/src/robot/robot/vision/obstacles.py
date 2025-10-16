@@ -4,8 +4,8 @@ import numpy as np
 from robot.vision.utils import getPoi
 
 def findObstacles(self, hsvFrame, outputFrame):
-    lower = np.array([60, 100, 0])
-    upper = np.array([95, 255, 255])
+    lower = np.array([35, 80, 25])
+    upper = np.array([90, 255, 255])
 
     mask = cv2.inRange(hsvFrame, lower, upper)
     # mask = cv2.inRange(hsvFrame, self.colourMask[0], self.colourMask[1])

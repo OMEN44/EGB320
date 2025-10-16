@@ -17,10 +17,10 @@ import math
 import time
 import json
 
-SUCCESS_THRESHOLD = 8  # Number of consecutive confirmations needed
+SUCCESS_THRESHOLD = 6 # Number of consecutive confirmations needed
 BACK_PROOF_LIMIT = 30
 
-SUCCESS_COUNT_THRESHOLD = 5  # Number of consecutive successes required
+SUCCESS_COUNT_THRESHOLD = 10  # Number of consecutive successes required
 
 class Navigation(Node):
     def __init__(self):
@@ -158,13 +158,13 @@ class Navigation(Node):
                 self.order_queue.append(order_data)
                 status = String()
                 status.data = f"delivery queued: {order_data['name']}, station {order_data['station']+1}, shelf {order_data['shelf']}, bay {order_data['bay']}, height {order_data['height']}"
-                self.nav_status_pub.publish(status)
+                # self.nav_status_pub.publish(status)
             except json.JSONDecodeError:
                 self.get_logger().error("Failed to decode order message JSON.")
 
     def get_delivery_measurements(self, order):
         # Determine picking bay index based on station
-        picking_bay_distances = [0.92, 0.6, 0]  # Distances to picking bays (1,2,3) in meters
+        picking_bay_distances = [0.8, 0.65, 0.8]  # Distances to picking bays (1,2,3) in meters
         shelf_distances =  [0.95, 0.67, 0.35, 0]  # Distances to shelves (0-5) in meters
         aisle_distances = [[0.2, np.pi/2], [0.8, -np.pi/2], [0.2, -np.pi/2]]
 
@@ -246,14 +246,16 @@ class Navigation(Node):
                 self.aisle_index = None
                 self.success_count = 0
                 self.tof_distance = 10  # Initialize with a large distance
-                self.state = 'DRIVE_TO_AISLE_FRONT'
+                self.state = 'FIND_AISLE_MARKER'
 
         elif self.state == 'FIND_AISLE_MARKER':
             self.send_vision_data("aisleMarkers", "")
             for i, marker in enumerate(self.aisle_markers):
                 if marker.exists:
                     self.aisle_index = i
-                    print(self.aisle_index)
+                    self.nav_status_pub.publish(String(data=f"Distance: {marker.distance:.2f} m"))
+                    self.publish_velocity(0.0, 0.0)
+                    # time.sleep(0.5)
                     self.state = 'DRIVE_TO_AISLE_FRONT'
                     # self.state = 'DONE'
                     break
@@ -277,7 +279,8 @@ class Navigation(Node):
             if self.aisle_markers[self.aisle_index].exists:
                 aisleBearing = ((self.aisle_markers[self.aisle_index].bearing[1])/1000) 
                 aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
-                if aisleDistance < (1.29):
+                self.nav_status_pub.publish(String(data=f"Distance: {aisleDistance:.2f} m"))
+                if aisleDistance < (1.395):
                     self.success_count += 1
                     if (self.success_count >= SUCCESS_COUNT_THRESHOLD):
                         self.publish_velocity(0.0, 0.0)
@@ -288,7 +291,7 @@ class Navigation(Node):
                         self.target_angle = self.prev_imu - 85.0
 
                         # self.state = 'TURN_TO_STATION_BEARING'
-                        print(aisleDistance)
+                        
 
                         # self.state = 'DONE'
                         # time.sleep(0.01)
@@ -369,6 +372,7 @@ class Navigation(Node):
 
         elif self.state == 'DRIVE_TO_BAY_FRONT':
             self.back_proof_counter += 1
+            stop_distance = self.picking_bay_distance 
             # print(self.get_distance())
             self.send_vision_data("shelves,obstacles", "")
             time.sleep(0.001)  # Allow time for vision to process
@@ -381,7 +385,7 @@ class Navigation(Node):
                 bearings.extend([shelf.bearing[0]/1000, shelf.bearing[1]/1000, shelf.bearing[2]/1000])
 
             if len(bearings)!=0:
-                offset_deg = 20
+                offset_deg = 10
                 self.ref_bearing = min(bearings)  # Choose smallest bearing (leftmost object)
                 goal_bearing = self.ref_bearing - np.radians(offset_deg)           
             else:
@@ -397,15 +401,20 @@ class Navigation(Node):
                     self.prev_tof_distance = self.get_distance()
                 if (self.picking_marker_index == 2):
                     stop_distance = self.picking_bay_distances[1]
-            stop_distance = self.picking_bay_distance + 0.1
+            self.nav_status_pub.publish(String(data=f"Distance: {self.get_distance():.2f} m, Condition: {self.get_distance() < stop_distance}, Success: {self.success_count}"))
+
             if self.get_distance() < stop_distance:
                 self.success_count += 1
                 if self.success_count >= SUCCESS_THRESHOLD:
+                    self.publish_velocity(0.0, 0.0)  # Ensure stop before any transition
+                    self.nav_status_pub.publish(String(data=f"Distance: {self.get_distance():.2f}"))
                     if (self.picking_marker_index == 2):
                         self.state = 'APF_PICKING_THREE'
                     else:
-                        self.publish_velocity(0.0, 0.0)
                         self.state = 'FIND_PICKING_BAY'
+
+            else:
+                self.success_count = 0
                 
 
             U_rep = apf.repulsiveField(all_obstacles, self.phi)
@@ -416,9 +425,9 @@ class Navigation(Node):
                 theta = 0.0
                 e_theta = apf.angle_wrap(best_bearing - theta)
 
-                k_omega = 0.4
-                v_max = 0.2
-                sigma = np.radians(50)
+                k_omega = 0.3
+                v_max = 0.15
+                sigma = np.radians(40)
                 omega = -(k_omega * e_theta)
                 v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
                 self.publish_velocity(v, omega)
@@ -442,6 +451,7 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.0)
                 self.success_count = 0
                 self.state = 'FIND_PICKING_BAY'
+                
 
         
         elif self.state == 'FIND_PICKING_BAY':
@@ -540,9 +550,93 @@ class Navigation(Node):
                     self.success_count += 1
                     if self.success_count >= SUCCESS_THRESHOLD:
                         self.publish_velocity(0.0, 0.0)
-                        self.state = 'DONE'
+                        self.aisle_index = None
+                        self.prev_imu = self.rot_z  
+                        self.target_angle = self.prev_imu - 180
+                        self.state = '180_TURN'
+                else:
+                    self.success_count = 0
             else:
                 self.publish_velocity(0.0, 0.65)    
+
+        elif self.state == '180_TURN':
+            self.get_logger().info(f'{self.rot_z}, {self.target_angle}, {self.target_angle > self.rot_z}')
+            if self.target_angle < self.rot_z:
+                self.publish_velocity(0.0, 0.7)
+            else:
+                self.publish_velocity(0.0, 0.0)
+                time.sleep(0.1)
+                self.state = 'DONE'
+
+        elif self.state == 'BACK_TO_RETURN_ZONE':
+            self.send_vision_data("aisleMarkers,obstacles,shelves", "")
+            for i, marker in enumerate(self.aisle_markers):
+                if marker.exists:
+                    self.aisle_index = i
+                    break
+            if self.aisle_index is None:
+                self.publish_velocity(0.0, 0.7)
+                return
+            # aisleBearing = math.degrees((self.aisle_markers[self.aisle_index].bearing[1])/1000)
+            
+            # self.nav_status_pub.publish(String(data=f"Distance: {aisleDistance:.2f} m"))
+            if self.aisle_markers[self.aisle_index].exists:
+                aisleBearing = ((self.aisle_markers[self.aisle_index].bearing[1])/1000) 
+                aisleDistance = (self.aisle_markers[self.aisle_index].distance)/100000
+                if aisleDistance < (1.29):
+                    self.success_count += 1
+                    if (self.success_count >= SUCCESS_COUNT_THRESHOLD):
+                        self.publish_velocity(0.0, 0.0)
+                        self.success_count = 0
+                        # self.state = 'TURN_TOWARDS_PICKING_BAY_DIR'
+                        self.prev_imu = self.rot_z  
+                        self.state = 'TURN_90_DEG'
+                        self.target_angle = self.prev_imu - 85.0
+
+                        # self.state = 'TURN_TO_STATION_BEARING'
+                        print(aisleDistance)
+
+                        # self.state = 'DONE'
+                        # time.sleep(0.01)
+                        return
+                goal = [aisleDistance, aisleBearing]
+                # print(goal)
+                all_obstacles = []
+                for i, group in enumerate(self.obstacles):
+                    # all_obstacles.append(((group.distance)/100000, (group.bearing[0])/1000))  # merge lists
+                    all_obstacles.append(((group.distance)/100000, (group.bearing[1])/1000))  # merge lists
+
+                    # all_obstacles.append(((group.distance)/100000, (group.bearing[2])/1000))  # merge lists
+
+                for i, group in enumerate(self.shelves):
+                        # all_obstacles.append((0.5, (group.bearing[0])/1000))  # merge lists
+                        all_obstacles.append((0.5, (group.bearing[1])/1000))  # merge lists
+
+                        # all_obstacles.append((0.5/100000, (group.bearing[2])/1000))  # merge lists
+
+
+                U_rep = apf.repulsiveField(all_obstacles, self.phi)
+                U_att = apf.attractiveField(goal, self.phi)
+                # print(all_obstacles)
+                best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+                # print(best_bearing)
+
+                if best_bearing is not None:
+                    theta = 0.0
+                    e_theta = apf.angle_wrap(best_bearing - theta)
+
+                    k_omega = 0.3
+                    v_max = 0.25
+                    sigma = np.radians(40)
+
+                    omega = -(k_omega * e_theta)
+                    v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+                    self.publish_velocity(v, omega)
+                    # print("(" + str(v) + ", " + str(omega) + ")")
+                    # print(v)
+                else:
+                    self.publish_velocity(0.0, 0.4)
+                    print("No valid bearing found, rotating...")
 
 
 
