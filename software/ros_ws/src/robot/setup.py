@@ -30,7 +30,8 @@ setup(
             'pid = robot.pid_nav_node:main',
             'initialisationTest = robot.initialisationTest:main',
             'rightTurn = robot.right_turn:main',
-            'backToReturn = robot.drive_to_aisle_front:main'
+            'backToReturn = robot.drive_to_aisle_front:main',
+            'dynamicTest = robot.dynamic_testing:main'
         ],
     },
 )
