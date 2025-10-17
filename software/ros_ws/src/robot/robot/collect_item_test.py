@@ -202,7 +202,7 @@ class Navigation(Node):
 
         shelf_direction = [-85, 85, -85, 85, -85, 85]
 
-        item_distances = {'Ball': 0.13, 'Cube': 0.13, 'Bowl': 0.13}
+        item_distances = {'Ball': 0.12, 'Cube': 0.12, 'Bowl': 0.12}
 
         self.item_name = order['name'] 
         self.item_distance = item_distances[self.item_name]
@@ -274,37 +274,38 @@ class Navigation(Node):
         # self.get_logger().info(str(self.state))
         # print(self.gZ)
         if self.state == 'START':
-            if len(self.order_queue) >= 1:
-                self.aisle_index = None
-                self.success_count = 0
-                self.tof_distance = 10  # Initialize with a large distance
+            self.publish_collection(4, True)
+            if self.arm_status:
+                if len(self.order_queue) >= 1:
+                    self.aisle_index = None
+                    self.success_count = 0
+                    self.tof_distance = 10  # Initialize with a large distance
 
-                # Create action queue based on order
-                # self.action_queue = [{"action": 'FIND_RETURN_ZONE', "params": []},
-                #                      {"action": 'TURN_DYNAMIC', "params": [-85]}]
-                self.action_queue = []
+                    # Create action queue based on order
+                    # self.action_queue = [{"action": 'FIND_RETURN_ZONE', "params": []},
+                    #                      {"action": 'TURN_DYNAMIC', "params": [-85]}]
+                    self.action_queue = []
 
-                
-                self.prev_imu = self.rot_z
-                # self.action_queue = [{"action": 'TURN_DYNAMIC', "params": [-85]}]
-                for order in self.order_queue:
-                    self.get_delivery_measurements(order)
-                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
-                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [-1.05]})
+                    self.prev_imu = self.rot_z
+                    # self.action_queue = [{"action": 'TURN_DYNAMIC', "params": [-85]}]
+                    for order in self.order_queue:
+                        self.get_delivery_measurements(order)
+                        # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
+                        # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [-1.05]})
 
-                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.picking_bay_distance]})
-                    # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
-                    # self.action_queue.append({"action": 'FIND_PICKING_MARKER', "params": [self.picking_marker_index]})
-                    # self.action_queue.append({"action": 'DRIVE_UP_BAY', "params": []})
-                    self.action_queue.append({"action": 'COLLECT_ITEM', "params": []})
-                    # self.action_queue.append({"action": 'LEAVE_PICKING_BAY', "params": []})
-                    # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
-                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
+                        # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.picking_bay_distance]})
+                        # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
+                        # self.action_queue.append({"action": 'FIND_PICKING_MARKER', "params": [self.picking_marker_index]})
+                        # self.action_queue.append({"action": 'DRIVE_UP_BAY', "params": []})
+                        self.action_queue.append({"action": 'COLLECT_ITEM', "params": []})
+                        # self.action_queue.append({"action": 'LEAVE_PICKING_BAY', "params": []})
+                        # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
+                        # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
 
-                print(self.action_queue)
-                self.next()
-            else:
-                self.send_to_web('Waiting for orders...')
+                    print(self.action_queue)
+                    self.next()
+                else:
+                    self.send_to_web('Waiting for orders...')
 
         elif self.state == 'FIND_RETURN_ZONE':
             self.send_vision_data("aisleMarkers,obstacles,shelves", "")
@@ -432,11 +433,53 @@ class Navigation(Node):
             else:
                 self.publish_velocity(0.0, 0.65)    
     
-            
+        # elif self.state == 'COLLECT_ITEM':
+        #     self.send_vision_data("items", self.item_name)
+        #     time.sleep(0.001)
+        #     if (self.focus_item.distance)/100000 <= self.item_distance or (len(self.items) == 0) or np.degrees(abs(self.focus_item.bearing[1])/1000) > 30:
+        #         self.success_count += 1
+        #         if self.success_count >= SUCCESS_THRESHOLD:
+        #             self.send_to_web("Item Aligned")
+        #             self.state = 'DONE'
+        #     if len(self.items) != 0:
+        #         prev_bearing = 360
+        #         for i in range (len(self.items)):
+        #             if np.degrees(self.items[i].bearing[1]/1000) < prev_bearing:
+        #                 prev_bearing = self.items[i].bearing[1]/1000
+        #                 self.focus_item = self.items[i] 
+        #     all_obstacles = []
+        #     # --- 3. Attractive field goal (bearing only) ---
+        #     goal_distance = self.focus_item.distance/100000  # in meters
+        #     goal_bearing = self.focus_item.bearing[1]/1000
+
+        #     goal = [goal_distance, goal_bearing]
+
+        #     U_rep = apf.repulsiveField(all_obstacles, self.phi)
+        #     U_att = apf.attractiveField(goal, self.phi)
+        #     best_bearing = apf.bestBearing(U_att, U_rep, self.phi)
+
+        #     if best_bearing is not None:
+        #         theta = 0.0
+        #         e_theta = apf.angle_wrap(best_bearing - theta)
+
+        #         k_omega = 0.3
+        #         v_max = 0.22
+        #         sigma = np.radians(50)
+
+        #         omega = -(k_omega * e_theta)
+        #         v = v_max * np.exp(-(e_theta**2) / (2*sigma**2))
+        #         # if (self.back_proof_counter >= BACK_PROOF_LIMIT):
+        #         #     v = max(v, 0.0)  # Minimum forward speed
+        #         self.publish_velocity(v, omega)
+
+        #     else:
+        #         self.publish_velocity(0.0, 0.65)
+
         elif self.state == 'COLLECT_ITEM':
             self.send_vision_data("pickingMarkers,items",self.item_name)
             print(self.item_name)
             time.sleep(0.001)
+            
             if len(self.items) != 0:
                 prev_bearing = 360
                 for i in range (len(self.items)):
@@ -462,10 +505,21 @@ class Navigation(Node):
             else:
                 self.publish_velocity(0.0, 0.6)
                 self.send_to_web(f"Angular Vel: 0.6")
+            if (self.focus_item.distance)/100000 <= self.item_distance or (len(self.items) == 0) or np.degrees(abs(self.focus_item.bearing[1])/1000) > 30:
+                self.success_count += 1
+                if self.success_count >= SUCCESS_THRESHOLD:
+                    self.send_to_web("Item Aligned")
+                    time.sleep(1.0)
+                    
+                    self.state = 'LOWER_ARM'
 
-            if (self.focus_item.distance <= self.item_distance) or (len(self.items) == 0) or np.degrees(abs(self.focus_item.bearing[1]/1000)) > 30:
-                self.send_to_web("Item Aligned")
-                self.state = 'DONE'
+        elif self.state == 'LOWER_ARM':
+            self.publish_collection(0, True)
+            if self.arm_status:
+                self.state = 'CLOSE_ARM'
+        elif self.state == 'CLOSE_ARM':
+            self.publish_collection(0, False) 
+
 
         elif self.state == 'ADJUST_TO_ITEM':
             if self.get_distance() <= self.target_tof_distance:

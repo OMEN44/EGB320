@@ -42,7 +42,7 @@ class CollectionNode(Node):
             90,   # floor
             20,   # level 1
             -25,     # level 2
-            -90,    # level 3
+            -80,    # level 3
             -50,   # idle
         ]
 
