@@ -163,6 +163,9 @@ class Navigation(Node):
                 self.success_count = 0
                 self.send_to_web(f"RESET SUCCESS COUNT")  
             self.send_to_web(f"{self.state}")
+            if self.state == 'DYNAMIC_AISLE_MARKER':
+                self.aisle_marker_num = None 
+
         else:
             self.state = 'DONE'
     
@@ -190,7 +193,7 @@ class Navigation(Node):
     def get_delivery_measurements(self, order):
         # Determine picking bay index based on station
         picking_bay_distances = [0.8, 0.45, 0.8]  # Distances to picking bays (1,2,3) in meters
-        shelf_distances =  [0.95, 0.67, 0.35, 0]  # Distances to shelves (0-5) in meters
+        shelf_distances =  [0.95, 0.67, 0.47, 0]  # Distances to shelves (0-5) in meters
         aisle_distances = [[0.2, 85], [-1.15, -85], [-0.35, -85]]
 
         shelf_direction = [-85, 85, -85, 85, -85, 85]
@@ -270,7 +273,7 @@ class Navigation(Node):
                 self.tof_distance = 10  # Initialize with a large distance
 
                 # Create action queue based on order
-                self.action_queue = [{"action": 'FIND_RETURN_ZONE', "params": []},
+                self.action_queue = [{"action": 'DYNAMIC_AISLE_MARKER', "params": [1.4]},
                                      {"action": 'TURN_DYNAMIC', "params": [-85]}]
                 # self.action_queue = []
 
@@ -289,14 +292,15 @@ class Navigation(Node):
                     self.action_queue.append({"action": 'LEAVE_PICKING_BAY', "params": []})
                     self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
                     self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
-                    self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
+                    self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
+                    self.action_queue.append({"action": 'DYNAMIC_AISLE_MARKER', "params": [self.shelf_distance]})
 
                 print(self.action_queue)
                 self.next()
             else:
                 self.send_to_web('Waiting for orders...')
 
-        elif self.state == 'FIND_RETURN_ZONE':
+        elif self.state == 'DYNAMIC_AISLE_MARKER':
             self.send_vision_data("aisleMarkers,obstacles,shelves", "")
             for i, marker in enumerate(self.aisle_markers):
                 if marker.exists:
@@ -312,7 +316,7 @@ class Navigation(Node):
                     aisleBearing = ((self.aisle_markers[self.aisle_marker_num].bearing[1])/1000) 
                     aisleDistance = (self.aisle_markers[self.aisle_marker_num].distance)/100000
                     self.nav_status_pub.publish(String(data=f"Distance: {aisleDistance:.2f} m"))
-                    if aisleDistance < (1.41):
+                    if aisleDistance < (self.action_queue[self.action_index]['params'][0]):
                         self.success_count += 1
                         if (self.success_count >= SUCCESS_COUNT_THRESHOLD):
                             self.publish_velocity(0.0, 0.0)
