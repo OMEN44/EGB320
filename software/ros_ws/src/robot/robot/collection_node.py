@@ -39,11 +39,11 @@ class CollectionNode(Node):
         self.currentAngles = [0, 0] # arm, gripper
         self.targets = [0, 0] # arm, gripper
         self.presets = [
-            -90,   # floor
-            -70,   # level 1
-            0,     # level 2
-            20,    # level 3
-            -60,   # idle
+            90,   # floor
+            20,   # level 1
+            -25,     # level 2
+            -90,    # level 3
+            -50,   # idle
         ]
 
     def onArmAction(self, msg):

@@ -55,6 +55,12 @@ def useVideo(self, framePath=None):
         # Draw the pipeline on the top left of the frame
         frames[i] = cv2.rectangle(frames[i], (5, 35), (130, 50 + 20 * len(self.pipeline)), (0, 0, 0), -1)        
         frames[i] = cv2.putText(frames[i], 'Filters:', (14, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+
+        # Display target item in bottom right
+        if self.targetItem:
+            frames[i] = cv2.rectangle(frames[i], (int(WIDTH / OUTPUT_SCALE) - 155, int(HEIGHT / OUTPUT_SCALE) - 30), (int(WIDTH / OUTPUT_SCALE) - 5, int(HEIGHT / OUTPUT_SCALE) - 5), (0, 0, 0), -1)
+            frames[i] = cv2.putText(frames[i], f'Target: {self.targetItem}', (int(WIDTH / OUTPUT_SCALE) - 150, int(HEIGHT / OUTPUT_SCALE) - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+
         for j in range(len(self.pipeline)):
             frames[i] = cv2.putText(frames[i], self.pipeline[j], (14, 65 + 20 * j), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
         self.sink[i].schedule_frame(cv2.cvtColor(frames[i], cv2.COLOR_BGR2RGB))

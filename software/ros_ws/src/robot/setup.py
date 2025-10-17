@@ -31,7 +31,8 @@ setup(
             'initialisationTest = robot.initialisationTest:main',
             'rightTurn = robot.right_turn:main',
             'backToReturn = robot.drive_to_aisle_front:main',
-            'dynamicTest = robot.dynamic_testing:main'
+            'dynamicTest = robot.dynamic_testing:main',
+            'collectionTest = robot.collect_item_test:main'
         ],
     },
 )

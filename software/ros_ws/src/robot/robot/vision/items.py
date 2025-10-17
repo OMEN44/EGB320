@@ -3,14 +3,14 @@ import numpy as np
 
 from robot.vision.utils import getPoi
 
-ITEM_WIDTHS = [
-    5.5, # 0: Bowl
-    4.5, # 1: Coffee Cup
-    2,   # 2: Robot Oil Bottle
-    4,   # 3: Rubiks Cube
-    4.5, # 4: Soccer Ball
-    6.5, # 5: Wheet Bots
-]
+ITEM_WIDTHS = {
+    'Bowl': 5.5, # 0: Bowl
+    'Mug': 4.5, # 1: Coffee Cup
+    'Bottle': 2,   # 2: Robot Oil Bottle
+    'Cube': 4,   # 3: Rubiks Cube
+    'Ball': 4.5, # 4: Soccer Ball
+    'Weetbots': 6.5, # 5: Wheet Bots
+}
 
 # range
 # [0, 90, 130] to [40, 255, 255]
@@ -33,11 +33,12 @@ def findItems(self, hsvframe, outputFrame):
         area = cv2.contourArea(contour)
         if area > 150 and area < 25000:
             x, y, w, h = cv2.boundingRect(contour)
-            poi = getPoi(ITEM_WIDTHS[3], w, x, self.calibration['new_k'][0,0])
-            outputFrame = cv2.putText(outputFrame, f'Item {count}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
-            count += 1
-            outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)
-            # outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
-            data.append(poi)
+            if self.targetItem is not None:
+                poi = getPoi(ITEM_WIDTHS[self.targetItem], w, x, self.calibration['new_k'][0,0])
+                data.append(poi)
+                outputFrame = cv2.putText(outputFrame, f'Item {count}', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
+                count += 1
+                outputFrame = cv2.rectangle(outputFrame, (x, y), (x + w, y + h), (18, 111, 183), 2)
+                # outputFrame = cv2.putText(outputFrame, f'{int(poi.distance)}cm, {int(poi.bearing[1])}deg', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (18, 111, 183), 2)
             
     return [outputFrame, data]

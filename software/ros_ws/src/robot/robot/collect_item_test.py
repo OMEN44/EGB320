@@ -95,6 +95,8 @@ class Navigation(Node):
         # IMU
         self.imu = PiicoDev_MPU6050(addr=0x68)
         self.t = time.time()
+
+        self.target_tof_distance = None
     
         # Calibrate
         count = 0
@@ -128,6 +130,7 @@ class Navigation(Node):
 
         # Delivery measurements
         self.item_name = None 
+        self.item_distance = None
         self.picking_marker_index = None  # Assuming station numbers are 1-indexed
         self.aisle_index = None
         self.picking_bay_distance = None 
@@ -143,12 +146,16 @@ class Navigation(Node):
         # Tof
         self.tof_sensor = PiicoDev_VL53L1X()
 
+        self.distance_needed = None
+
         # Action queue
         # Each element has an action property and a list of parameters for that action
         self.action_queue = []
         self.action_index = -1 # Start before the first action
 
         self.aisle_marker_num = None
+
+        self.focus_item = None
 
     def get_distance(self):
         return self.tof_sensor.read() / 1000
@@ -191,11 +198,14 @@ class Navigation(Node):
         # Determine picking bay index based on station
         picking_bay_distances = [0.8, 0.45, 0.8]  # Distances to picking bays (1,2,3) in meters
         shelf_distances =  [0.95, 0.67, 0.35, 0]  # Distances to shelves (0-5) in meters
-        aisle_distances = [[0.2, 85], [-1.15, -85], [-0.35, -85]]
+        aisle_distances = [[0.2, 85], [-1.15, -85], [-0.2, -85]]
 
         shelf_direction = [-85, 85, -85, 85, -85, 85]
 
+        item_distances = {'Ball': 0.13, 'Cube': 0.13, 'Bowl': 0.13}
+
         self.item_name = order['name'] 
+        self.item_distance = item_distances[self.item_name]
         self.picking_marker_index = order['station']  # Assuming station numbers are 1-indexed
         # if int((order['shelf'])) == 0 or if int((order['shelf'])) == 0
         self.aisle_index = int((order['shelf'])/2)
@@ -270,9 +280,9 @@ class Navigation(Node):
                 self.tof_distance = 10  # Initialize with a large distance
 
                 # Create action queue based on order
-                self.action_queue = [{"action": 'FIND_RETURN_ZONE', "params": []},
-                                     {"action": 'TURN_DYNAMIC', "params": [-85]}]
-                # self.action_queue = []
+                # self.action_queue = [{"action": 'FIND_RETURN_ZONE', "params": []},
+                #                      {"action": 'TURN_DYNAMIC', "params": [-85]}]
+                self.action_queue = []
 
                 
                 self.prev_imu = self.rot_z
@@ -282,14 +292,14 @@ class Navigation(Node):
                     # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
                     # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [-1.05]})
 
-                    self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.picking_bay_distance]})
-                    self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
-                    self.action_queue.append({"action": 'FIND_PICKING_MARKER', "params": [self.picking_marker_index]})
-                    self.action_queue.append({"action": 'DRIVE_UP_BAY', "params": []})
-                    self.action_queue.append({"action": 'LEAVE_PICKING_BAY', "params": []})
-                    self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
-                    self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
-                    self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
+                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.picking_bay_distance]})
+                    # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [-85]})
+                    # self.action_queue.append({"action": 'FIND_PICKING_MARKER', "params": [self.picking_marker_index]})
+                    # self.action_queue.append({"action": 'DRIVE_UP_BAY', "params": []})
+                    self.action_queue.append({"action": 'COLLECT_ITEM', "params": []})
+                    # self.action_queue.append({"action": 'LEAVE_PICKING_BAY', "params": []})
+                    # self.action_queue.append({"action": 'TURN_DYNAMIC', "params": [self.aisle_turn_direction]})
+                    # self.action_queue.append({"action": 'RETURN_ZONE_DYNAMIC', "params": [self.aisle_distance]})
 
                 print(self.action_queue)
                 self.next()
@@ -423,18 +433,76 @@ class Navigation(Node):
                 self.publish_velocity(0.0, 0.65)    
     
             
+        elif self.state == 'COLLECT_ITEM':
+            self.send_vision_data("pickingMarkers,items",self.item_name)
+            print(self.item_name)
+            time.sleep(0.001)
+            if len(self.items) != 0:
+                prev_bearing = 360
+                for i in range (len(self.items)):
+                    if np.degrees(self.items[i].bearing[1]/1000) < prev_bearing:
+                        prev_bearing = self.items[i].bearing[1]/1000
+                        self.focus_item = self.items[i] 
+            
+                kp = 0.08
+                item_bearing = np.degrees(self.focus_item.bearing[1]/1000)
+                rotation_velocity = kp * item_bearing 
+                rotation_velocity = -(max(min(rotation_velocity, 0.45), -0.45))
+                if abs(item_bearing) < 5 and self.focus_item.distance < self.item_distance:
+                    self.publish_velocity(0.0, 0.0)
+                    self.send_to_web("Straight Ahead")
+                    # distance_needed = abs(self.focus_item.distance - self.item_distance)
+                    # self.target_tof_distance = self.get_distance() - distance_needed
+                    # self.state = 'ADJUST_TO_ITEM'              
+                elif abs(item_bearing) < 5:
+                    self.publish_velocity(0.14, 0.0)
+                else:
+                    self.publish_velocity(0.05, rotation_velocity)
+                    self.send_to_web(f"Angular Vel: {rotation_velocity}, Target Angle: {item_bearing}")
+            else:
+                self.publish_velocity(0.0, 0.6)
+                self.send_to_web(f"Angular Vel: 0.6")
+
+            if (self.focus_item.distance <= self.item_distance) or (len(self.items) == 0) or np.degrees(abs(self.focus_item.bearing[1]/1000)) > 30:
+                self.send_to_web("Item Aligned")
+                self.state = 'DONE'
+
+        elif self.state == 'ADJUST_TO_ITEM':
+            if self.get_distance() <= self.target_tof_distance:
+                self.publish_velocity(0.0, 0.0)
+                self.state = 'DONE'
+
+            else:
+                self.publish_velocity(0.12, 0.0)
+
+            # error = distance - self.item_distance
+
+            # kp = 0.2   # proportional gain
+
+            # if error-0.009 <= 0.01:  # within ±1 cm
+            #     v = 0.0
+            #     bot.SetTargetVelocities(0.0, 0.0)
+            #     # print(f"Stopping. Distance: {distance:.3f}, Error: {error:.3f}")
+            #     print("Red - Placing Item on a shelf")
+            #     state = 19
+            # else:
+            #     v = kp * error
+            #     v = max(min(v, 0.05), -0.05)  # clamp both directions
+            #     bot.SetTargetVelocities(v, 0.0)
+            # self.publish_velocity(0.0, 0.0)
+        
         elif self.state == 'LEAVE_PICKING_BAY':
             dist = self.get_distance()
             self.send_to_web(f'distance: {dist}, condition: {dist > 0.55}')
             self.publish_velocity(-0.1, 0.0)
-            if dist > 0.6:
+            if dist > 0.55:
                 self.publish_velocity(0.0, 0.0)
                 time.sleep(0.5)
                 self.next()
 
 
         elif self.state == 'RETURN_ZONE_DYNAMIC':
-            distance = self.get_distance()
+            distance = self.get_distanc()
 
             self.back_proof_counter += 1
             sign = self.action_queue[self.action_index]['params'][0] / abs(self.action_queue[self.action_index]['params'][0])

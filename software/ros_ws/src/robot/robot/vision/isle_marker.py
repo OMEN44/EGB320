@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import String
 
-from robot.vision.utils import getPoi, getEmptyPoi, HISTORY_LEN, PERSISTENCE_THRESHOLD
+from robot.vision.utils import getPoi, getEmptyPoi, HISTORY_LEN, PERSISTENCE_THRESHOLD, HEIGHT
 
 isleMarkerCount = []
 
@@ -100,7 +100,7 @@ def findPickingStationMarkers(self, hsvFrame, outputFrame):
             approx = cv2.approxPolyDP(cnt, .03 * cv2.arcLength(cnt, True), True)
             x, y, w, h = cv2.boundingRect(approx)
             # If convex and has 4 sides and is roughly square
-            if cv2.isContourConvex(approx) and len(approx) == 4 and abs(w - h) < 10:
+            if y < HEIGHT * (3 / 4) and cv2.isContourConvex(approx) and len(approx) == 4 and abs(w - h) < 10:
                 outputFrame = cv2.drawContours(outputFrame, [approx], -1, (0, 255, 0), 2)
                 
                 if len(isleClusters) == 0:

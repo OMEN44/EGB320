@@ -39,6 +39,7 @@ class Vision(Node):
 
         # Initialise subscribers
         self.filters = self.create_subscription(String, '/pipeline_filters', self.updatePipeline, 10)
+        self.targetItem = self.create_subscription(String, '/target_item', self.updateTarget, 10)
         self.webuiTopic = self.create_subscription(String, '/web_topic', self.onWebMessage, 10)
         self.orderTopic = self.create_subscription(String, '/order', self.onOrderMessage, 10)
         self.numberTopic = self.create_subscription(Float32MultiArray, '/number_topic', self.onNumberMessage, 10)
@@ -55,6 +56,7 @@ class Vision(Node):
         self.sink = setupFakeCam()
         self.cap = setupCameraWithDefaults()
         self.colourMask = (np.array([70,0,0]), np.array([100, 255, 255]))
+        self.targetItem = None
         self.areaLimit = [100, 500]
         self.frameName = 'isle1'
         self.number = [1, 1.3]
@@ -90,6 +92,10 @@ class Vision(Node):
             return
 
         cv2.imwrite(f'/home/pi/EGB320/software/python/calibration/{msg.data}.jpg', frame)
+
+    def updateTarget(self, msg):
+        self.get_logger().info(f'Updated target item to: {msg.data}')
+        self.targetItem = msg.data
 
     def onOrderMessage(self, msg):
         if msg.data == 'init':
